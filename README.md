@@ -16,6 +16,13 @@ Describe your SAP architecture in plain language and the agent generates:
 
 The skill enforces the SAP atomic design system — no plain boxes for named services, no hand-written icon styles, no off-palette colors.
 
+Prompt: 
+```bash
+/drawio-skill-sap BTP diagram for workzone, integration suite, S/4HANA public cloud and Successfactors
+```
+Result:
+<img width="1175" height="591" alt="image" src="https://github.com/user-attachments/assets/29f0d68f-69ea-4c55-aad0-bdfb73626fcd" />
+
 ---
 
 ## Prerequisites
