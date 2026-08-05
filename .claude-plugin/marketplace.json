@@ -1,7 +1,7 @@
 {
   "name": "sap-btp-architecture-diagram-generator",
   "description": "Skills for generating production-quality SAP BTP solution diagrams (Horizon theme) via draw.io desktop CLI",
-  "version": "1.5.3",
+  "version": "1.0.0",
   "owner": {
     "name": "lofonD"
   },
