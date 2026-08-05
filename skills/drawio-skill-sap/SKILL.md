@@ -1,8 +1,8 @@
 ---
 name: drawio-skill-sap
-description: "Generate SAP BTP solution diagrams following the official SAP BTP Solution Diagram Design Guideline (Horizon theme). Use when: user requests an SAP architecture diagram, BTP landscape, Cloud Foundry/Kyma topology, Integration Suite flow, on-premise connectivity, subaccount layout, or any SAP system visualization. Produces .drawio XML with official SAP Horizon colors, proper area nesting, connector semantics, and exports images via draw.io CLI. Reference: 1) https://github.com/SAP/btp-solution-diagrams  2) https://github.com/Agents365-ai/drawio-skill"
+description: "Generate SAP BTP solution diagrams as .drawio XML aligned to the SAP BTP Solution Diagram Design Guideline (Horizon theme), including official colors, area nesting, connector semantics, and draw.io CLI export support."
 homepage: https://github.com/lofonD/SAP-BTP-Architecture-Diagram-Generator
-compatibility: Requires draw.io desktop app CLI on PATH (macOS/Linux/Windows). Self-check step requires a vision-enabled model (e.g., Claude Sonnet/Opus); gracefully skipped if unavailable.
+compatibility: Requires draw.io desktop app CLI on PATH (macOS/Linux/Windows). Optional self-check uses a vision-capable model and is skipped if unavailable.
 platforms: [macos, linux, windows]
 metadata: {"openclaw":{"requires":{"anyBins":["draw.io","drawio"]},"emoji":"📐","os":["darwin","linux","win32"],"install":[{"id":"brew-drawio","kind":"brew","formula":"drawio","bins":["draw.io"],"label":"Install draw.io via Homebrew","os":["darwin"]}]},"hermes":{"tags":["drawio","diagram","flowchart","architecture","visualization","uml"],"category":"design","requires_tools":["draw.io"],"related_skills":["mermaid","excalidraw","plantuml"]},"author":"Agents365-ai","version":"1.5.3"}
 ---
@@ -342,32 +342,24 @@ Report file paths. Offer to open: `start diagram.drawio` (Windows).
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <!-- L0: BTP Platform boundary (blue fill) -->
         <mxCell id="2" value="" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0070F2;fillColor=#EBF8FF;arcSize=24;absoluteArcSize=1;strokeWidth=1.5;container=0;" vertex="1" parent="1">
           <mxGeometry x="50" y="80" width="1100" height="650" as="geometry"/>
         </mxCell>
-        <!-- Title (separate text cell) -->
         <mxCell id="3" value="&lt;b style=&quot;color:#0070F2;font-size:16px;font-family:arial;&quot;&gt;SAP BTP Solution Diagram&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#1D2D3E;" vertex="1" parent="1">
           <mxGeometry x="50" y="50" width="260" height="30" as="geometry"/>
         </mxCell>
-        <!-- L1: Subaccount (grey border, white fill) -->
         <mxCell id="4" value="Subaccount" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#475E75;fillColor=#ffffff;arcSize=24;absoluteArcSize=1;strokeWidth=1.5;verticalAlign=top;align=left;fontSize=16;fontStyle=1;spacingLeft=10;spacingTop=10;fontColor=#1D2D3E;" vertex="1" parent="1">
           <mxGeometry x="70" y="130" width="500" height="350" as="geometry"/>
         </mxCell>
-        <!-- L2: Runtime (blue, inside subaccount) -->
         <mxCell id="5" value="" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0070F2;fillColor=#EBF8FF;arcSize=24;absoluteArcSize=1;strokeWidth=1.5;container=0;" vertex="1" parent="1">
           <mxGeometry x="90" y="190" width="460" height="260" as="geometry"/>
         </mxCell>
-        <!-- Service with a REAL SAP icon: style obtained via `sap_shapesearch.py "task center"` -->
-        <!-- (the image= value is a base64 SVG data URI ~5-8KB long — always copy it verbatim from the script output, never shorten or hand-type it) -->
         <mxCell id="6" value="SAP Task&#xa;Center" style="shape=image;verticalLabelPosition=bottom;verticalAlign=top;imageAspect=0;aspect=fixed;image=data:image/svg+xml,&lt;BASE64_SVG_DATA_FROM_sap_shapesearch.py&gt;;fontColor=#1D2D3E;" vertex="1" parent="1">
           <mxGeometry x="120" y="220" width="32" height="32" as="geometry"/>
         </mxCell>
-        <!-- Non-SAP external system (grey) -->
         <mxCell id="7" value="External System" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F6F7;strokeColor=#475E75;fontColor=#1D2D3E;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
           <mxGeometry x="100" y="850" width="160" height="70" as="geometry"/>
         </mxCell>
-        <!-- Connector: synchronous (solid blue, strokeWidth=1.5) -->
         <mxCell id="10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0070F2;strokeWidth=1.5;endArrow=blockThin;endFill=1;endSize=4;startSize=4;" edge="1" parent="1" source="6" target="7">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -379,20 +371,13 @@ Report file paths. Offer to open: `start diagram.drawio` (Windows).
 
 ### Area Style Patterns (from official examples)
 
+L0: BTP Platform (blue border, blue fill, no title bar)
+
 ```xml
-<!-- L0: BTP Platform (blue border, blue fill, no title bar) -->
 style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0070F2;fillColor=#EBF8FF;arcSize=24;absoluteArcSize=1;strokeWidth=1.5;container=0;"
-
-<!-- L1: Subaccount (grey border, white fill, with title) -->
 style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#475E75;fillColor=#ffffff;arcSize=24;absoluteArcSize=1;strokeWidth=1.5;verticalAlign=top;align=left;fontSize=16;fontStyle=1;spacingLeft=10;spacingTop=10;fontColor=#1D2D3E;"
-
-<!-- L2: Runtime/service group (blue border, blue fill) -->
 style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0070F2;fillColor=#EBF8FF;arcSize=24;absoluteArcSize=1;strokeWidth=1.5;container=0;"
-
-<!-- Non-SAP area (grey border, light grey fill) -->
 style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#475E75;fillColor=#F5F6F7;arcSize=24;absoluteArcSize=1;strokeWidth=1.5;fontColor=#1D2D3E;"
-
-<!-- Accent area (teal, use sparingly) -->
 style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#07838F;fillColor=#DAFDF5;arcSize=24;absoluteArcSize=1;strokeWidth=1.5;fontColor=#1D2D3E;"
 ```
 
@@ -401,31 +386,14 @@ style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#07838F;fillColor=#DAFDF5;ar
 These match the official "Default/Colored Connectors SAP BTP" bundled shapes (verify exact strings anytime with `sap_shapesearch.py "<name> color"` or `"direct one-directional"`, etc.).
 
 ```xml
-<!-- Default/standard flow (solid grey, thin block arrow) -->
 style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475E75;strokeWidth=1.5;endArrow=blockThin;endFill=1;endSize=4;startSize=4;"
-
-<!-- Bidirectional (solid grey, arrows both ends) -->
 style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475E75;strokeWidth=1.5;endArrow=blockThin;endFill=1;startArrow=blockThin;startFill=1;endSize=4;startSize=4;"
-
-<!-- No arrow (connection line only) -->
 style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475E75;strokeWidth=1.5;endArrow=none;endFill=0;startArrow=none;startFill=0;endSize=4;startSize=4;"
-
-<!-- Asynchronous / indirect (dashed grey) -->
 style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;strokeColor=#475E75;strokeWidth=1.5;endArrow=blockThin;endFill=1;endSize=4;startArrow=none;startFill=0;startSize=4;jumpStyle=none;jumpSize=0;targetPerimeterSpacing=15;dashed=1;"
-
-<!-- Optional (dotted) -->
 style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;strokeColor=#475E75;strokeWidth=1.5;endArrow=blockThin;endFill=1;endSize=4;startArrow=none;startFill=0;startSize=4;jumpStyle=none;jumpSize=0;targetPerimeterSpacing=15;dashed=1;dashPattern=1 4;"
-
-<!-- Trust flow (pink / Accent 3) -->
 style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#CB00DC;strokeWidth=1.5;endArrow=blockThin;endFill=1;endSize=4;startSize=4;"
-
-<!-- Authentication flow (green / success) -->
 style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#188918;strokeWidth=1.5;endArrow=blockThin;endFill=1;endSize=4;startSize=4;"
-
-<!-- Authorization flow (indigo / Accent 2) -->
 style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5D36FF;strokeWidth=1.5;endArrow=blockThin;endFill=1;endSize=4;startSize=4;"
-
-<!-- Firewall / network barrier (thick grey, no arrow) -->
 style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475E75;strokeWidth=3;endArrow=none;endFill=0;startArrow=none;startFill=0;"
 ```
 

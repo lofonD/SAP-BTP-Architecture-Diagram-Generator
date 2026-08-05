@@ -13,7 +13,6 @@ Read this **before hand-writing any `.drawio` XML** (workflow step 3). Skip it w
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <!-- user shapes start at id="2" -->
       </root>
     </mxGraphModel>
   </diagram>
@@ -45,18 +44,17 @@ For **vendor/branded icons** (AWS/Azure/GCP/Cisco/Kubernetes) and any non-trivia
 
 ### Required properties
 
+Rectangle / rounded box:
+
 ```xml
-<!-- Rectangle / rounded box -->
 <mxCell id="2" value="Label" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
   <mxGeometry x="100" y="100" width="160" height="60" as="geometry" />
 </mxCell>
 
-<!-- Cylinder (database) -->
 <mxCell id="3" value="DB" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
   <mxGeometry x="350" y="100" width="120" height="80" as="geometry" />
 </mxCell>
 
-<!-- Diamond (decision) -->
 <mxCell id="4" value="Check?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
   <mxGeometry x="100" y="220" width="160" height="80" as="geometry" />
 </mxCell>
@@ -77,11 +75,9 @@ For architecture diagrams with nested elements, use draw.io's parent-child conta
 - Children set `parent="containerId"` and use coordinates **relative to the container**
 
 ```xml
-<!-- Swimlane container -->
 <mxCell id="svc1" value="User Service" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
   <mxGeometry x="100" y="100" width="300" height="200" as="geometry"/>
 </mxCell>
-<!-- Child inside container — coordinates relative to parent -->
 <mxCell id="api1" value="REST API" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="svc1">
   <mxGeometry x="20" y="40" width="120" height="60" as="geometry"/>
 </mxCell>
@@ -95,17 +91,14 @@ For architecture diagrams with nested elements, use draw.io's parent-child conta
 **CRITICAL:** Every edge `mxCell` must contain a `<mxGeometry relative="1" as="geometry" />` child element. Self-closing edge cells (`<mxCell ... edge="1" ... />`) are **invalid** and will not render. Always use the expanded form.
 
 ```xml
-<!-- Directed arrow — always include rounded, orthogonalLoop, jettySize for clean routing -->
 <mxCell id="10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="2" target="3">
   <mxGeometry relative="1" as="geometry" />
 </mxCell>
 
-<!-- Arrow with label + explicit entry/exit points to control direction -->
 <mxCell id="11" value="HTTP/REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="2" target="4">
   <mxGeometry relative="1" as="geometry" />
 </mxCell>
 
-<!-- Arrow with waypoints — use when edge must route around other shapes -->
 <mxCell id="12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="3" target="5">
   <mxGeometry relative="1" as="geometry">
     <Array as="points">
@@ -157,11 +150,9 @@ When multiple edges connect to the same shape, assign different entry/exit point
 When a diagram uses 3+ semantic colors, add a legend so the color coding is self-explanatory. Generate it mechanically from the roles actually present — never invent legend entries that aren't in the diagram:
 
 ```xml
-<!-- Legend container: place in a corner clear of the diagram (e.g. below-left) -->
 <mxCell id="legend" value="Legend" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;verticalAlign=top;fontStyle=1;" vertex="1" parent="1">
   <mxGeometry x="40" y="720" width="180" height="110" as="geometry"/>
 </mxCell>
-<!-- One swatch + label pair per used role, 24px row pitch, children of the legend -->
 <mxCell id="leg1" value="" style="rounded=0;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="legend">
   <mxGeometry x="10" y="30" width="30" height="16" as="geometry"/>
 </mxCell>

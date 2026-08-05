@@ -55,7 +55,7 @@ there is nothing to diff.
 ## How the sticky comment works
 
 The action tags its comment body with an HTML marker
-(`<!-- drawio-pr-diff-bot -->`) and, before posting, searches the PR's
+(`&lt;!-- drawio-pr-diff-bot --&gt;`) and, before posting, searches the PR's
 existing comments (via `gh api .../issues/<n>/comments`) for one starting
 with that marker. If found, it `PATCH`es that comment in place; otherwise it
 creates a new one with `gh pr comment`. This keeps one running comment per PR

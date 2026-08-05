@@ -17,7 +17,14 @@ A user preset shadows a built-in of the same name.
 
 Only user presets can have `"default": true`. When the user says *"make `<built-in-name>` my default"*, copy the built-in JSON to `~/.drawio-skill/styles/<name>.json` first, then set `default: true` on the copy — leave the shipped built-in untouched.
 
-**Name normalisation:** always lowercase the user-provided name before writing or looking up files (the preset schema enforces lowercase; uppercase names will fail validation).
+**Name normalisation + safety validation:** lowercase the user-provided name, then validate it before any file operation.
+
+Validation rules for every preset name (`<name>`, `<a>`, `<b>`):
+- Must match the schema pattern `^[a-z0-9][a-z0-9_-]*$`.
+- Reject if it contains `/`, `\\`, or `..`.
+- Reject empty names.
+
+If validation fails, stop and ask for a different name.
 
 ## Applying a preset
 
@@ -62,14 +69,14 @@ When SKILL.md's Step 0 identified a preset, it fully replaces the built-in palet
 
 1. **Load the extraction reference.** Read `references/style-extraction.md` into context.
 2. **Extract** following the XML path or image path procedure in the reference.
-3. **Normalize and build candidate.** Convert the user-provided preset name to lowercase. Use this normalized name for ALL file paths in this flow. Build the candidate preset JSON and write it to `/tmp/drawio-preset-<name>.json` (where `<name>` is the already-normalized name). Do **not** save to `~/.drawio-skill/styles/<name>.json` yet.
+3. **Normalize, validate, and build candidate.** Convert the user-provided preset name to lowercase, validate it using the rules above, then use this sanitized name for ALL file paths in this flow. Build the candidate preset JSON and write it to `/tmp/drawio-preset-<name>.json` (where `<name>` is the already-sanitized name). Do **not** save to `~/.drawio-skill/styles/<name>.json` yet.
 4. **Render a sample** using the sample-diagram skeleton in `references/style-extraction.md`, parameterized by the candidate preset. Export PNG to `./preset-<name>-sample.png` using the same `drawio -x -f png -e -s 2 -o ./preset-<name>-sample.png /tmp/drawio-preset-<name>.drawio` command the main workflow uses, then run `repair_png.py` on it (see the Rendering the sample steps in `style-extraction.md`).
 5. **Show the user:**
    - Preset summary table (palette hex values, shapes per role, font, edge style, extras).
    - The sample PNG path (and embed the image if the environment supports it).
    - Provenance line: `source.type`, `source.path`, `extracted_at`, `confidence`.
 6. **Wait for approval:**
-   - "save" / "looks good" → write candidate to `~/.drawio-skill/styles/<name>.json`. Create `~/.drawio-skill/styles/` if it doesn't exist. Delete tempfile and sample PNG.
+   - "save" / "looks good" → validate `<name>`; resolve `~/.drawio-skill/styles/<name>.json` to a canonical path and verify it remains under `~/.drawio-skill/styles/`; then write candidate. Create `~/.drawio-skill/styles/` if it doesn't exist. Delete tempfile and sample PNG.
    - "change `<field>` to `<value>`" → edit the in-memory candidate, re-render, re-ask.
    - "cancel" / "abort" / "no" → delete tempfile and sample PNG; nothing saved.
 
@@ -90,7 +97,13 @@ When SKILL.md's Step 0 identified a preset, it fully replaces the built-in palet
 
 All operations are natural language — no slash commands.
 
-*Apply name normalisation (lowercase) to all `<name>`, `<a>`, `<b>` arguments before any file operation.*
+*Before any file operation, apply name normalisation + safety validation to all `<name>`, `<a>`, `<b>` arguments.*
+
+For delete/rename/default operations, also enforce path containment:
+1. Build the candidate path from `~/.drawio-skill/styles/` + `<name>.json`.
+2. Resolve to an absolute canonical path.
+3. Verify the resolved path is still under `~/.drawio-skill/styles/`.
+4. Only then perform remove/move/write using the resolved path. Never interpolate user-supplied preset names into destructive shell command strings.
 
 | User says | Agent does |
 |---|---|
@@ -98,8 +111,8 @@ All operations are natural language — no slash commands.
 | "show my `<name>` style", "what's in `<name>`" | Print the preset JSON (pretty-printed) + a one-line summary (source, confidence, is-default). |
 | "make `<name>` the default", "set `<name>` as default" | If `<name>` is a user preset: set `default: true` on it; clear `default` on any other user preset that had it; save both files. If `<name>` is a built-in: copy `<this-skill-dir>/styles/built-in/<name>.json` → `~/.drawio-skill/styles/<name>.json` first, then set `default: true` on the copy. Never mutate the shipped built-in. |
 | "remove default", "unset default" | Clear `default: true` from whichever user preset has it. |
-| "delete `<name>`", "remove `<name>`" | Confirm first. Then `rm ~/.drawio-skill/styles/<name>.json`. Refuse to delete files under `<this-skill-dir>/styles/built-in/` — suggest shadowing with a user preset of the same name. |
-| "rename `<a>` to `<b>`" | `mv ~/.drawio-skill/styles/<a>.json ~/.drawio-skill/styles/<b>.json`, then update the `name` field inside. Fails if `<a>` is a built-in (offer to copy-then-rename instead). |
+| "delete `<name>`", "remove `<name>`" | Confirm first. Validate `<name>`. Resolve `~/.drawio-skill/styles/<name>.json` to a canonical path and verify it remains under `~/.drawio-skill/styles/`. Then delete that resolved file. Refuse to delete files under `<this-skill-dir>/styles/built-in/` — suggest shadowing with a user preset of the same name. |
+| "rename `<a>` to `<b>`" | Validate `<a>` and `<b>`. Resolve both source and target (`~/.drawio-skill/styles/<a>.json`, `~/.drawio-skill/styles/<b>.json`) to canonical paths and verify both remain under `~/.drawio-skill/styles/`. Then move source to target and update the `name` field inside. Fails if `<a>` is a built-in (offer to copy-then-rename instead). |
 | "learn my style from `<path>` as `<name>`" | Dispatch to the Learn flow above. |
 
 ## Preset file validation

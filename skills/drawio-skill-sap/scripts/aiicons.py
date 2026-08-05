@@ -1,33 +1,11 @@
 #!/usr/bin/env python3
-"""Find AI / LLM brand logos (OpenAI, Claude, Gemini, ...) as draw.io styles.
-
-draw.io's bundled shape libraries have no modern AI/LLM brand logos, so an
-"LLM app architecture" renders as generic boxes. This resolves a brand name to a
-draw.io `image` style that references the matching SVG from the lobe-icons set
-(https://github.com/lobehub/lobe-icons, MIT) on the unpkg CDN.
-
-  python3 aiicons.py "openai"
-  python3 aiicons.py "claude" --json
-  python3 aiicons.py "langchain" --variant mono --size 48
-
-The icon is referenced by URL (data/lobe-icons.json carries only the name list,
-not the assets), so draw.io fetches it from the CDN when the diagram is rendered
-or opened. That means **network is required at render time**; an offline export
-draws a blank box. Use --embed to fetch the SVG once and inline it as a
-self-contained data URI instead (portable, no network at render time).
-
-The logos are trademarks of their respective owners and are referenced here for
-identification only — the same basis on which draw.io ships AWS/Azure icons.
-
-Usage: python3 aiicons.py <query> [--limit N] [--variant color|mono|text]
-                                  [--size PX] [--embed] [--json] [--list]
-"""
 import argparse
 import base64
 import json
 import os
 import re
 import sys
+from urllib.parse import urlparse
 import urllib.request
 
 MANIFEST = os.path.join(os.path.dirname(__file__), "..", "data", "lobe-icons.json")
@@ -36,9 +14,16 @@ STYLE = ("shape=image;html=1;imageAspect=0;aspect=fixed;"
 _VARIANT = re.compile(r"-(?:color|text(?:-[a-z]{2})?|brand(?:-color)?)$")
 
 # Common RAG/LLM data stores that lobe-icons lacks, mapped to simple-icons
-# slugs (https://simpleicons.org, CC0). Served from the simple-icons CDN. Each
-# slug below is verified to return HTTP 200 at https://cdn.simpleicons.org/<slug>.
-_SIMPLEICONS_CDN = "https://cdn.simpleicons.org/"
+# slugs (https://simpleicons.org, CC0). Each slug below is verified to resolve
+# from the published simple-icons asset endpoint.
+_SIMPLEICONS_BASE_URL = "https://cdn.simpleicons.org/"
+_ALLOWED_ICON_HOSTS = {
+    "cdn.simpleicons.org",
+    "unpkg.com",
+    "cdn.jsdelivr.net",
+    "raw.githubusercontent.com",
+    "github.com",
+}
 _SUPPLEMENT = {
     "qdrant": "qdrant",
     "milvus": "milvus",
@@ -124,8 +109,24 @@ def pick_variant(base, variants, prefer):
     return next(iter(sorted(variants)), None)
 
 
+def _is_allowed_icon_url(url):
+    parsed = urlparse(url)
+    return parsed.scheme == "https" and parsed.netloc in _ALLOWED_ICON_HOSTS
+
+
+def _fetch_svg(url, timeout=15):
+    if not _is_allowed_icon_url(url):
+        raise ValueError(f"blocked icon URL host: {url}")
+    req = urllib.request.Request(url, headers={"User-Agent": "aiicons/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        svg = resp.read()
+    if b"<svg" not in svg[:512]:
+        raise ValueError(f"response is not SVG: {url}")
+    return svg
+
+
 def main():
-    ap = argparse.ArgumentParser(description="Find AI/LLM brand logos as draw.io styles (lobe-icons via CDN).")
+    ap = argparse.ArgumentParser(description="Find AI/LLM brand logos as draw.io styles (lobe-icons asset URLs).")
     ap.add_argument("query", nargs="?", help='brand name, e.g. "openai" or "claude"')
     ap.add_argument("--limit", type=int, default=8)
     ap.add_argument("--variant", choices=["color", "mono", "text"], default="color")
@@ -140,7 +141,9 @@ def main():
         sys.exit(f"error: manifest not found at {MANIFEST}")
     manifest = json.load(open(MANIFEST, encoding="utf-8"))
     fam = families(manifest["icons"])
-    cdn = manifest["cdn"]
+    asset_base_url = manifest.get("base_url") or manifest["cdn"]
+    if not _is_allowed_icon_url(asset_base_url):
+        sys.exit(f"error: untrusted icon base URL in manifest: {asset_base_url}")
 
     if args.list:
         for base in sorted(fam):
@@ -155,10 +158,10 @@ def main():
     if matches:
         for base in matches:
             file = pick_variant(base, fam[base], args.variant)
-            url = f"{cdn}{file}.svg"
+            url = f"{asset_base_url}{file}.svg"
             if args.embed:
                 try:
-                    svg = urllib.request.urlopen(url, timeout=15).read()
+                    svg = _fetch_svg(url, timeout=15)
                 except Exception as exc:                   # noqa: BLE001 - report and skip
                     sys.stderr.write(f"warning: could not fetch {url} ({exc})\n")
                     continue
@@ -176,15 +179,15 @@ def main():
         brand = search_supplement(args.query)
         if brand:
             slug = _SUPPLEMENT[brand]
-            url = _SIMPLEICONS_CDN + slug
+            url = _SIMPLEICONS_BASE_URL + slug
             image = url
             if args.embed:
                 try:
-                    svg = urllib.request.urlopen(url, timeout=15).read()
+                    svg = _fetch_svg(url, timeout=15)
                     # Marker-less base64 (see issue #80 note above).
                     image = "data:image/svg+xml," + base64.b64encode(svg).decode()
-                except Exception as exc:                   # noqa: BLE001 - keep the CDN URL
-                    sys.stderr.write(f"warning: could not fetch {url} ({exc}); using CDN URL\n")
+                except Exception as exc:                   # noqa: BLE001 - keep the asset URL
+                    sys.stderr.write(f"warning: could not fetch {url} ({exc}); using asset URL\n")
             results.append({"brand": brand, "file": f"simpleicons:{slug}",
                             "w": args.size, "h": args.size, "style": STYLE + image})
 

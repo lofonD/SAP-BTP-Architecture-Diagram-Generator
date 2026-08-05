@@ -2,6 +2,8 @@
 
 Loaded on demand by `SKILL.md` when the user asks to learn a style ("learn my style from `<path>` as `<name>`") or when the agent needs to render a sample after extraction.
 
+Name safety: before any file write/move/delete that uses `<name>`, apply the validation rules in `references/style-presets.md` (lowercase + `^[a-z0-9][a-z0-9_-]*$`, reject `/`, `\\`, `..`, and empty names).
+
 ## Sample diagram (for approval render)
 
 After extracting a candidate preset, render this seven-node sample using the candidate's palette/shapes/fonts/edges. Each role appears exactly once; six edges, one dashed, exercise `edges.arrow`, `edges.style`, and `edges.dashedFor`.
@@ -38,13 +40,9 @@ The edge style is built as:
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-
-        <!-- Row 1: gateway -->
         <mxCell id="2" value="Gateway" style="{{VSTYLE:gateway}}" vertex="1" parent="1">
           <mxGeometry x="340" y="40" width="160" height="60" as="geometry" />
         </mxCell>
-
-        <!-- Row 2: security | service | queue -->
         <mxCell id="3" value="Auth" style="{{VSTYLE:security}}" vertex="1" parent="1">
           <mxGeometry x="80" y="180" width="160" height="60" as="geometry" />
         </mxCell>
@@ -54,8 +52,6 @@ The edge style is built as:
         <mxCell id="5" value="Queue" style="{{VSTYLE:queue}}" vertex="1" parent="1">
           <mxGeometry x="600" y="180" width="160" height="60" as="geometry" />
         </mxCell>
-
-        <!-- Row 3: database | external | error -->
         <mxCell id="6" value="Database" style="{{VSTYLE:database}}" vertex="1" parent="1">
           <mxGeometry x="80" y="340" width="160" height="70" as="geometry" />
         </mxCell>
@@ -65,8 +61,6 @@ The edge style is built as:
         <mxCell id="8" value="Error Sink" style="{{VSTYLE:error}}" vertex="1" parent="1">
           <mxGeometry x="600" y="340" width="160" height="60" as="geometry" />
         </mxCell>
-
-        <!-- Edges -->
         <mxCell id="10" value="" style="{{ESTYLE}};exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="2" target="3">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -94,7 +88,7 @@ The edge style is built as:
 
 ### Rendering the sample
 
-1. Write the filled XML to `/tmp/drawio-preset-<name>.drawio`.
+1. Validate `<name>` using `references/style-presets.md` (`^[a-z0-9][a-z0-9_-]*$`, no `/`, `\\`, or `..`), then write the filled XML to `/tmp/drawio-preset-<name>.drawio`.
 2. Run the same `drawio -x -f png -e -s 2 -o <preset-name>-sample.png <tmp>.drawio` command the main workflow uses (substitute the binary name you resolved in SKILL.md Step 1 if it isn't `drawio`).
 3. Repair the IEND chunk: `python3 <this-skill-dir>/scripts/repair_png.py <preset-name>-sample.png` — the `-e` flag truncates the PNG the same way the main workflow's step 7 does, so the sample needs the same fix to be readable.
 4. Save the PNG as `./preset-<name>-sample.png` (the user's working directory).
@@ -102,7 +96,7 @@ The edge style is built as:
 
 ### Approval loop
 
-- "save" / "looks good" → write candidate to `~/.drawio-skill/styles/<name>.json`; delete tempfile and sample PNG.
+- "save" / "looks good" → validate `<name>`; resolve `~/.drawio-skill/styles/<name>.json` to a canonical path and verify it remains under `~/.drawio-skill/styles/`; then write candidate and delete tempfile/sample PNG using resolved paths, not shell strings built from the name.
 - "change <field> to <value>" → edit the in-memory candidate; re-render; re-ask.
 - "cancel" → delete tempfile and sample PNG; no save.
 

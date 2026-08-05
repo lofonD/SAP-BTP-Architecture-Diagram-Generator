@@ -1,27 +1,4 @@
 #!/usr/bin/env python3
-"""Re-theme an EXISTING .drawio with a style preset — layout and shapes untouched.
-
-Style presets (styles/schema.json) normally apply at generation time; this is
-the post-processor for diagrams that already exist: "make this dark", "apply my
-corporate style to last week's diagram".
-
-  python3 restyle.py diagram.drawio --preset dark
-  python3 restyle.py diagram.drawio --preset ~/.drawio-skill/styles/corp.json -o out.drawio
-
-What it changes, per the preset application rules in references/style-presets.md:
-- Every vertex fill/stroke is remapped to the preset palette. Each existing
-  fillColor is matched to its nearest palette slot by hue (grey/low-saturation
-  -> neutral), so same-colored nodes stay same-colored in the new theme.
-- font.fontFamily on every vertex; existing fontSize values are kept (they
-  encode hierarchy).
-- extras: fontColor (vertices + text cells), edgeColor (edge stroke + label),
-  sketch=1, globalStrokeWidth, page background on <mxGraphModel>.
-Edge ROUTING styles and shape keywords are left alone — rewriting them would
-break existing waypoints and geometry. fillColor=none is structural (lanes,
-transparent containers) and is never replaced.
-
-Usage: restyle.py <file.drawio> --preset <name|path.json> [-o <out.drawio>]
-"""
 import argparse
 import colorsys
 import json
@@ -35,14 +12,31 @@ SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SLOT_HUES = {"primary": 210, "success": 120, "warning": 50, "accent": 30,
              "danger": 0, "secondary": 280}
 SLOT_ORDER = ["primary", "success", "warning", "accent", "danger", "neutral", "secondary"]
+PRESET_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+
+
+def validate_preset_name(name):
+    """Validate a preset *name* (not a path) used for lookup in preset dirs."""
+    norm = (name or "").strip().lower()
+    if not norm:
+        sys.exit("error: preset name is empty")
+    if "/" in norm or "\\\\" in norm or ".." in norm:
+        sys.exit("error: preset name must not contain '/', '\\\\', or '..'")
+    if not PRESET_NAME_RE.fullmatch(norm):
+        sys.exit("error: invalid preset name; use [a-z0-9][a-z0-9_-]*")
+    return norm
 
 
 def find_preset(name):
     """Resolve a preset name/path to its JSON dict (user dir, then built-ins)."""
-    candidates = [name] if name.endswith(".json") else [
-        os.path.expanduser(f"~/.drawio-skill/styles/{name.lower()}.json"),
-        os.path.join(SKILL_DIR, "styles", "built-in", f"{name.lower()}.json"),
-    ]
+    if name.endswith(".json"):
+        candidates = [name]
+    else:
+        safe_name = validate_preset_name(name)
+        candidates = [
+            os.path.expanduser(f"~/.drawio-skill/styles/{safe_name}.json"),
+            os.path.join(SKILL_DIR, "styles", "built-in", f"{safe_name}.json"),
+        ]
     for path in candidates:
         if os.path.isfile(path):
             with open(path, encoding="utf-8") as f:
