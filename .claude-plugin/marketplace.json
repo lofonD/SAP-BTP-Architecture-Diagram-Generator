@@ -1,0 +1,33 @@
+{
+  "name": "sap-btp-architecture-diagram-generator",
+  "description": "Skills for generating production-quality SAP BTP solution diagrams (Horizon theme) via draw.io desktop CLI",
+  "version": "1.5.3",
+  "owner": {
+    "name": "lofonD"
+  },
+  "plugins": [
+    {
+      "name": "drawio-skill-sap",
+      "displayName": "SAP BTP Architecture Diagram Generator",
+      "description": "Agent Skill that generates SAP Business Technology Platform (BTP) solution diagrams following the official SAP BTP Solution Diagram Design Guideline (Horizon theme), producing .drawio XML with official SAP Horizon colors, atomic design system shapes, and exporting to PNG/SVG/PDF/JPG via the draw.io desktop CLI.",
+      "author": {
+        "name": "lofonD"
+      },
+      "license": "MIT",
+      "keywords": [
+        "sap",
+        "btp",
+        "drawio",
+        "diagram",
+        "architecture",
+        "horizon",
+        "solution-diagram",
+        "visualization"
+      ],
+      "category": "design",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/drawio-skill-sap"]
+    }
+  ]
+}
