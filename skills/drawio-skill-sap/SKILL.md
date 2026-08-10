@@ -28,7 +28,7 @@ Official SAP example diagrams are in `references/`. Load them when you need real
 |---|---|
 | `references/drawio-sap-config.json` | The **real, official SAP shape library** (SAP Corporate / SAP BTP Graphics), exported from draw.io. Contains every persona/system icon, SAP product logo, reusable container ("Component Group"), and pre-styled connector as compressed shape XML. **Do not hand-write icon styles — always look shapes up here via `scripts/sap_shapesearch.py`.** <Mandatory to load> |
 | `scripts/sap_shapesearch.py` | Search `drawio-sap-config.json` by keyword and get the exact, ready-to-paste `style=` string (or full mxCell XML) for a real SAP icon, product logo, container template, or connector. **Use this for every persona/system node — never a plain box.** |
-| `references/BTP_Reference_Architect_Diagram.svg` | BTP Overall Reference Diagram Pattern |
+| `references/BTP_Reference_Architect_Diagram.drawio` | BTP Overall Reference Diagram Pattern |
 | `references/SAP_Task_Center_L0.drawio` | L0 Task Center L0 pattern |
 | `references/SAP_Task_Center_L1.drawio` | L1 Task Center L1 pattern |
 | `references/SAP_Task_Center_L2.drawio` | L2 Task Center L2 pattern |
@@ -67,6 +67,22 @@ This skill follows the **Atomic Design System** approach:
 - **Atoms**: colors, line styles, icons, text
 - **Molecules**: arrows, areas, service icons with labels
 - **Organisms**: component groups (User, BTP Layer, Third Party, On-Premise)
+
+### Diagram Levels (L0, L1, L2)
+
+Use the level intentionally based on audience and granularity (aligned to SAP Big Picture guidance).
+
+| Level | Audience | Purpose | Typical Content | Do not include |
+|---|---|---|---|---|
+| **L0** | Business stakeholders, sales, non-technical readers | Executive overview | Core systems/services, simplified neutral flows, minimal labels, short description | Deep technical internals, verbose annotations, complex connector semantics |
+| **L1** | Architects, presales, solution owners | Solution architecture view for technical decisions | Main BTP domains/subaccounts, key integrations, selected semantic flows, concise legend | Exhaustive runtime configuration and low-level implementation details |
+| **L2** | Solution/cloud architects, implementation teams | Detailed architecture for design/implementation | Explicit subaccounts/runtimes/services, trust/auth/integration paths, protocol labels when relevant, full legend | Irrelevant products/components not required by the requested flow |
+
+**Level rules:**
+- **L0**: Keep it high-level and visually simple. Neutral connectors are preferred. A legend is optional when line semantics are obvious.
+- **L1**: Show enough structure for architecture decisions without turning the diagram into implementation documentation.
+- **L2**: Include all technically relevant components and explicit flow semantics needed for implementation-level understanding.
+- If the user does not specify a level, ask once and default to **L1**.
 
 ### Official SAP Horizon Color Palette
 
@@ -235,7 +251,7 @@ Areas/containers use plain Horizon-styled rectangles (`strokeWidth=1.5` on all).
 
 If key details are missing, ask 1-3 focused questions:
 - **Which SAP services?** — HANA Cloud, Integration Suite, Connectivity, Kyma, ABAP env, etc.
-- **Detail level?** — L1 (high-level overview) or L2 (detailed with subaccounts)?
+- **Detail level?** — L0 (executive overview), L1 (architecture view), or L2 (detailed with subaccounts/runtimes)?
 - **On-premise systems?** — S/4HANA, ECC, third-party APIs?
 - **Output format?** — PNG (default), SVG, PDF?
 
