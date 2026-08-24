@@ -13,6 +13,23 @@ exports it:
 <extractor> → graph.json → autolayout.py → diagram.drawio → validate.py → (export PNG/SVG/PDF)
 ```
 
+## Quick quality gate runbook
+
+Use these commands as a standard local/CI gate:
+
+```bash
+# 1) Environment and script smoke checks
+py -3 skills/drawio-skill-sap/scripts/healthcheck.py
+
+# 2) Regression check against reference-diagram baseline
+py -3 skills/drawio-skill-sap/tests/run_golden_validation.py
+
+# 3) PR report with image diffs + validate quality summary
+py -3 skills/drawio-skill-sap/scripts/prdiff.py \
+	--base origin/main --head HEAD --out-dir drawio-pr --quality \
+	-o drawio-pr/report.md
+```
+
 ## Quick decision guide
 
 | I have… | I want… | Use |
@@ -103,5 +120,10 @@ The skill runs both directions — these turn a `.drawio` back into something el
 - **`relabel.py`** — swap every label via a JSON map, layout untouched — `--extract` dumps an identity map of all labels (vertices, edges, UserObjects, page names), translate the values, `--map` applies them. Built for bilingual (EN/CN) variants of one diagram.
 - **`restyle.py`** — apply a style preset (user or built-in, e.g. `dark`) to an existing `.drawio`: palette remap by hue, font, dark-theme extras, page background. Layout, shapes, and edge routing stay put.
 - **`validate.py`** — deterministic structural lint (dangling edges, dup/reserved ids, overlaps; `--score` for layout readability). Run before exporting.
+- **`healthcheck.py`** — one-command dependency + smoke test (draw.io, Graphviz, validate/json, sap_shapesearch/json, autolayout/json).
 - **`repair_png.py`** — fix draw.io's truncated IEND chunk after every `-e` PNG export (issue #8).
 - **`encode_drawio_url.py`** — encode a `.drawio` into a diagrams.net browser URL when the CLI is unavailable (`--edit` for an editable editor URL).
+
+Reference regression harness:
+
+- **`tests/run_golden_validation.py`** — compares reference-diagram `validate.py --score --json` outputs against `tests/golden_validation.json`.

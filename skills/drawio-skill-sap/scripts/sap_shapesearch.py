@@ -34,6 +34,9 @@ import zlib
 import urllib.parse
 
 CONFIG = os.path.join(os.path.dirname(__file__), "..", "references", "drawio-sap-config.json")
+EXIT_OK = 0
+EXIT_FAILED = 1
+EXIT_INPUT = 2
 
 
 def decode_shape_xml(xml_b64):
@@ -92,22 +95,88 @@ def main():
     ap.add_argument("--limit", type=int, default=10)
     ap.add_argument("--list-categories", action="store_true")
     ap.add_argument("--full", action="store_true", help="print the full decoded mxGraphModel XML")
+    ap.add_argument("--format", choices=["text", "json"], default="text",
+                    help="output format (default: text)")
+    ap.add_argument("--json", action="store_true",
+                    help="shortcut for --format json")
     args = ap.parse_args()
+    if args.json:
+        args.format = "json"
 
     if not os.path.exists(CONFIG):
-        sys.exit(f"error: SAP shape config not found at {CONFIG}")
+        msg = f"SAP shape config not found at {CONFIG}"
+        if args.format == "json":
+            print(json.dumps({"ok": False, "error": msg, "code": EXIT_INPUT}, ensure_ascii=False))
+        else:
+            print(f"error: {msg}", file=sys.stderr)
+        sys.exit(EXIT_INPUT)
+
     entries = load_entries()
 
     if args.list_categories:
-        list_categories(entries)
-        return
+        if args.format == "json":
+            counts = {}
+            for e in entries:
+                counts[e["category"]] = counts.get(e["category"], 0) + 1
+            payload = {
+                "ok": True,
+                "mode": "list-categories",
+                "categories": [{"name": k, "count": v} for k, v in sorted(counts.items())],
+            }
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+        else:
+            list_categories(entries)
+        sys.exit(EXIT_OK)
 
     if not args.query:
-        sys.exit("error: provide a search query, or use --list-categories")
+        msg = "provide a search query, or use --list-categories"
+        if args.format == "json":
+            print(json.dumps({"ok": False, "error": msg, "code": EXIT_INPUT}, ensure_ascii=False))
+        else:
+            print(f"error: {msg}", file=sys.stderr)
+        sys.exit(EXIT_INPUT)
 
     results = search(entries, args.query, args.category, args.limit)
     if not results:
-        sys.exit(f"no shapes matched {args.query!r}")
+        msg = f"no shapes matched {args.query!r}"
+        if args.format == "json":
+            print(json.dumps({
+                "ok": False,
+                "error": msg,
+                "query": args.query,
+                "category": args.category,
+                "limit": args.limit,
+                "code": EXIT_FAILED,
+            }, ensure_ascii=False, indent=2))
+        else:
+            print(msg, file=sys.stderr)
+        sys.exit(EXIT_FAILED)
+
+    if args.format == "json":
+        payload = {
+            "ok": True,
+            "query": args.query,
+            "category": args.category,
+            "limit": args.limit,
+            "count": len(results),
+            "results": [],
+        }
+        for e in results:
+            item = {
+                "category": e["category"],
+                "title": e["title"],
+                "width": e.get("w"),
+                "height": e.get("h"),
+            }
+            decoded = decode_shape_xml(e["xml"])
+            if args.full:
+                item["xml"] = decoded
+            else:
+                m = re.search(r'<mxCell[^>]*style="([^"]+)"', decoded)
+                item["style"] = m.group(1) if m else None
+            payload["results"].append(item)
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        sys.exit(EXIT_OK)
 
     for e in results:
         print(f"[{e['category']}] {e['title']}  ({e['w']}x{e['h']})")
@@ -118,6 +187,8 @@ def main():
             m = re.search(r'<mxCell[^>]*style="([^"]+)"', decoded)
             print("  style: " + (m.group(1) if m else "(group/container - use --full to see all cells)"))
         print()
+
+    sys.exit(EXIT_OK)
 
 
 if __name__ == "__main__":

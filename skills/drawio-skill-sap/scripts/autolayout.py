@@ -32,6 +32,9 @@ import sys
 from xml.sax.saxutils import escape
 
 DEFAULT_W, DEFAULT_H = 120, 60
+EXIT_OK = 0
+EXIT_FAILED = 1
+EXIT_INPUT = 2
 NODE_STYLE = "rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;"
 EDGE_STYLE = "html=1;rounded=0;"
 GROUP_STYLE = ("rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#999999;"
@@ -381,9 +384,38 @@ def main():
     ap.add_argument("--tune", action="store_true",
                     help="lay out in both directions (TB and LR), keep the more "
                          "readable one (fewer crossings / through-vertex routes)")
+    ap.add_argument("--format", choices=["text", "json"], default="text",
+                    help="diagnostic output format (default: text)")
+    ap.add_argument("--json", action="store_true",
+                    help="shortcut for --format json (requires --output)")
     args = ap.parse_args()
-    with open(args.input, encoding="utf-8") as f:
-        graph = json.load(f)
+    if args.json:
+        args.format = "json"
+    if args.format == "json" and not args.output:
+        print("error: --format json requires --output so XML and JSON outputs do not conflict", file=sys.stderr)
+        sys.exit(EXIT_INPUT)
+
+    try:
+        with open(args.input, encoding="utf-8") as f:
+            graph = json.load(f)
+    except (OSError, ValueError) as exc:
+        if args.format == "json":
+            print(json.dumps({"ok": False, "error": f"cannot read input graph: {exc}", "code": EXIT_INPUT},
+                             ensure_ascii=False))
+        else:
+            print(f"error: cannot read input graph: {exc}", file=sys.stderr)
+        sys.exit(EXIT_INPUT)
+
+    if "nodes" not in graph or not isinstance(graph["nodes"], list):
+        msg = "input graph must contain a 'nodes' array"
+        if args.format == "json":
+            print(json.dumps({"ok": False, "error": msg, "code": EXIT_INPUT}, ensure_ascii=False))
+        else:
+            print(f"error: {msg}", file=sys.stderr)
+        sys.exit(EXIT_INPUT)
+
+    chosen_direction = str(graph.get("direction", "TB")).upper()
+    tune_score = None
     if args.tune:
         best = None
         for d in ("TB", "LR"):
@@ -393,17 +425,38 @@ def main():
             if best is None or s < best[0]:
                 best = (s, d, h, p, ep)
         _, d, height, pos, edge_pts = best
-        print(f"tuned: direction={d} (score {best[0]:.2f})", file=sys.stderr)
+        chosen_direction = d
+        tune_score = best[0]
+        if args.format == "text":
+            print(f"tuned: direction={d} (score {best[0]:.2f})", file=sys.stderr)
     else:
         height, pos, edge_pts = layout(build_dot(graph))
+
     xml = to_drawio(graph, height, pos, edge_pts, color=not args.mono)
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(xml)
-        print(f"wrote {args.output} ({len(graph['nodes'])} nodes, "
-              f"{len(graph.get('edges', []))} edges)", file=sys.stderr)
+        if args.format == "json":
+            payload = {
+                "ok": True,
+                "input": args.input,
+                "output": args.output,
+                "nodes": len(graph["nodes"]),
+                "edges": len(graph.get("edges", [])),
+                "direction": chosen_direction,
+                "tuned": bool(args.tune),
+                "mono": bool(args.mono),
+            }
+            if tune_score is not None:
+                payload["tune_score"] = round(float(tune_score), 2)
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+        else:
+            print(f"wrote {args.output} ({len(graph['nodes'])} nodes, "
+                  f"{len(graph.get('edges', []))} edges)", file=sys.stderr)
     else:
         sys.stdout.write(xml)
+
+    sys.exit(EXIT_OK)
 
 
 if __name__ == "__main__":

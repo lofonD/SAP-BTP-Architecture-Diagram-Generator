@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import json
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -70,21 +71,49 @@ def export_png(src_drawio, out_png):
 
 
 def export_diff_png(base_drawio, head_drawio, out_png, tmp):
-    """drawiodiff.py -> autolayout.py -> CLI export a coloured diff PNG. True on success."""
+    """drawiodiff.py -> autolayout.py -> CLI export a coloured diff PNG.
+
+    Returns (ok, diff_drawio_path_or_None).
+    """
     diff_json = os.path.join(tmp, "diff.json")
     diff_drawio = os.path.join(tmp, "diff.drawio")
     r1 = subprocess.run([sys.executable, os.path.join(HERE, "drawiodiff.py"),
                         base_drawio, head_drawio, "-o", diff_json], capture_output=True)
     if r1.returncode != 0 or not os.path.exists(diff_json):
-        return False
+        return False, None
     r2 = subprocess.run([sys.executable, os.path.join(HERE, "autolayout.py"),
                         diff_json, "-o", diff_drawio], capture_output=True)
     if r2.returncode != 0 or not os.path.exists(diff_drawio):
-        return False
-    return export_png(diff_drawio, out_png)
+        return False, None
+    return export_png(diff_drawio, out_png), diff_drawio
 
 
-def build_entry(repo, base, head, path, status, out_dir, drawio_available):
+def validate_quality(drawio_path):
+    """Run validate.py in JSON mode; return a compact quality dict."""
+    r = subprocess.run(
+        [sys.executable, os.path.join(HERE, "validate.py"), drawio_path, "--score", "--json"],
+        capture_output=True,
+        text=True,
+    )
+    try:
+        payload = json.loads(r.stdout or "{}")
+    except ValueError:
+        return {
+            "ok": False,
+            "error": "validator did not return valid JSON",
+            "exit": r.returncode,
+        }
+    score = payload.get("score") or {}
+    summary = payload.get("summary") or {}
+    return {
+        "ok": bool(payload.get("ok", False)),
+        "errors": int(summary.get("errors", 0)),
+        "warnings": int(summary.get("warnings", 0)),
+        "score": score.get("value"),
+    }
+
+
+def build_entry(repo, base, head, path, status, out_dir, drawio_available, quality=False):
     """One render_markdown entry: fetch both sides, export whatever PNGs it can."""
     entry = {"path": path, "status": status}
     if not drawio_available:
@@ -96,18 +125,27 @@ def build_entry(repo, base, head, path, status, out_dir, drawio_available):
         head_drawio = os.path.join(tmp, "head.drawio")
         have_base = git_show_file(repo, base, path, base_drawio)
         have_head = git_show_file(repo, head, path, head_drawio)
+        if quality:
+            entry["quality"] = {}
         if have_base:
             p = os.path.join(out_dir, f"{slug}.base.png")
             if export_png(base_drawio, p):
                 entry["base_png"] = p
+            if quality:
+                entry["quality"]["base"] = validate_quality(base_drawio)
         if have_head:
             p = os.path.join(out_dir, f"{slug}.head.png")
             if export_png(head_drawio, p):
                 entry["head_png"] = p
+            if quality:
+                entry["quality"]["head"] = validate_quality(head_drawio)
         if have_base and have_head:
             p = os.path.join(out_dir, f"{slug}.diff.png")
-            if export_diff_png(base_drawio, head_drawio, p, tmp):
+            ok, diff_drawio = export_diff_png(base_drawio, head_drawio, p, tmp)
+            if ok:
                 entry["diff_png"] = p
+            if quality and diff_drawio and os.path.exists(diff_drawio):
+                entry["quality"]["diff"] = validate_quality(diff_drawio)
     return entry
 
 
@@ -127,6 +165,24 @@ def render_markdown(entries, out_dir):
         f"{len(entries)} file(s) changed: +{counts.get('added', 0)} added, "
         f"-{counts.get('removed', 0)} removed, ~{counts.get('modified', 0)} modified",
     ]
+    if any(e.get("quality") for e in entries):
+        total = {"errors": 0, "warnings": 0, "fail": 0, "scored": 0, "score_sum": 0.0}
+        for e in entries:
+            for side in (e.get("quality") or {}).values():
+                total["errors"] += int(side.get("errors", 0))
+                total["warnings"] += int(side.get("warnings", 0))
+                total["fail"] += 0 if side.get("ok") else 1
+                if side.get("score") is not None:
+                    total["scored"] += 1
+                    total["score_sum"] += float(side.get("score"))
+        lines.append("")
+        lines.append("## Quality summary")
+        lines.append("")
+        lines.append(f"Validator findings across rendered snapshots: {total['errors']} error(s), "
+                     f"{total['warnings']} warning(s), {total['fail']} failing snapshot(s).")
+        if total["scored"]:
+            lines.append(f"Average readability score: {total['score_sum'] / total['scored']:.2f} "
+                         f"across {total['scored']} snapshot(s).")
     if not entries:
         lines.append("")
         lines.append("No `.drawio` files changed.")
@@ -152,6 +208,18 @@ def render_markdown(entries, out_dir):
             lines.append(f"![diff]({diff_r})")
         if not (base_r or head_r or diff_r):
             lines.append("_no image produced._")
+        if e.get("quality"):
+            lines.append("")
+            lines.append("Quality checks:")
+            for side_name in ("base", "head", "diff"):
+                q = e["quality"].get(side_name)
+                if not q:
+                    continue
+                state = "PASS" if q.get("ok") else "FAIL"
+                score = q.get("score")
+                score_str = f", score={score}" if score is not None else ""
+                lines.append(f"- {side_name}: {state} (errors={q.get('errors', 0)}, "
+                             f"warnings={q.get('warnings', 0)}{score_str})")
     return "\n".join(lines) + "\n"
 
 
@@ -163,6 +231,8 @@ def main():
     ap.add_argument("--repo", default=".", help="path to the git repo (default: current directory)")
     ap.add_argument("--out-dir", default="drawio-pr", help="directory for exported PNGs (default: ./drawio-pr)")
     ap.add_argument("-o", "--output", help="write the Markdown report here (default: stdout)")
+    ap.add_argument("--quality", action="store_true",
+                    help="include validate.py quality checks for base/head/diff snapshots")
     args = ap.parse_args()
 
     changed = changed_drawios(args.base, args.head, args.repo)
@@ -175,7 +245,8 @@ def main():
                          "Markdown will list files only (is the draw.io CLI installed?)\n")
     os.makedirs(args.out_dir, exist_ok=True)
 
-    entries = [build_entry(args.repo, args.base, args.head, path, status, args.out_dir, drawio_available)
+    entries = [build_entry(args.repo, args.base, args.head, path, status, args.out_dir,
+                           drawio_available, quality=args.quality)
                for path, status in changed]
     report = render_markdown(entries, args.out_dir)
 

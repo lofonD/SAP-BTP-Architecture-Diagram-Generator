@@ -1,0 +1,72 @@
+{
+  "files": [
+    "SAP_Task_Center_L0.drawio",
+    "SAP_Task_Center_L1.drawio",
+    "SAP_Task_Center_L2.drawio",
+    "SAP_Start_L2.drawio",
+    "SAP_Build_Work_Zone_L2.drawio",
+    "SAP_Build_Process_Automation_L2.drawio",
+    "SAP_Cloud_Identity_Services_Authentication_L2.drawio",
+    "SAP_Cloud_Identity_Services_Authorization_L1.drawio",
+    "SAP_Cloud_Identity_Services_Identity_Lifecycle_L1.drawio",
+    "SAP_Private_Link_Service_L2.drawio",
+    "BTP_Reference_Architect_Diagram.drawio"
+  ],
+  "results": {
+    "SAP_Task_Center_L0.drawio": {
+      "errors": 0,
+      "warnings": 29,
+      "score": 100
+    },
+    "SAP_Task_Center_L1.drawio": {
+      "errors": 0,
+      "warnings": 66,
+      "score": 210
+    },
+    "SAP_Task_Center_L2.drawio": {
+      "errors": 0,
+      "warnings": 77,
+      "score": 280
+    },
+    "SAP_Start_L2.drawio": {
+      "errors": 0,
+      "warnings": 159,
+      "score": 550
+    },
+    "SAP_Build_Work_Zone_L2.drawio": {
+      "errors": 0,
+      "warnings": 215,
+      "score": 730
+    },
+    "SAP_Build_Process_Automation_L2.drawio": {
+      "errors": 0,
+      "warnings": 286,
+      "score": 1005
+    },
+    "SAP_Cloud_Identity_Services_Authentication_L2.drawio": {
+      "errors": 1,
+      "warnings": 131,
+      "score": 555
+    },
+    "SAP_Cloud_Identity_Services_Authorization_L1.drawio": {
+      "errors": 0,
+      "warnings": 165,
+      "score": 780
+    },
+    "SAP_Cloud_Identity_Services_Identity_Lifecycle_L1.drawio": {
+      "errors": 0,
+      "warnings": 168,
+      "score": 915
+    },
+    "SAP_Private_Link_Service_L2.drawio": {
+      "errors": 0,
+      "warnings": 109,
+      "score": 780
+    },
+    "BTP_Reference_Architect_Diagram.drawio": {
+      "errors": 0,
+      "warnings": 208,
+      "score": 710
+    }
+  }
+}

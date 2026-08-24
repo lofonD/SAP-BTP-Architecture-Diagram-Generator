@@ -29,10 +29,14 @@ skipped with a warning — this skill always writes uncompressed XML.
 Usage: python3 validate.py <file.drawio> [--strict]
 """
 import argparse
+import json
 import sys
 import xml.etree.ElementTree as ET
 
 RESERVED = {"0", "1"}
+EXIT_OK = 0
+EXIT_FAILED = 1
+EXIT_INPUT = 2
 
 
 def rect(cell):
@@ -308,17 +312,69 @@ def main():
     ap.add_argument("--score", action="store_true",
                     help="also print a readability score (lower is better) — "
                          "useful for comparing layout variants of the same graph")
+    ap.add_argument("--format", choices=["text", "json"], default="text",
+                    help="output format (default: text)")
+    ap.add_argument("--json", action="store_true",
+                    help="shortcut for --format json")
     args = ap.parse_args()
+    if args.json:
+        args.format = "json"
+
     try:
         tree = ET.parse(args.file)
     except (ET.ParseError, OSError) as exc:
-        sys.exit(f"error: cannot parse {args.file}: {exc}")
+        msg = f"cannot parse {args.file}: {exc}"
+        if args.format == "json":
+            print(json.dumps({"ok": False, "error": msg, "code": EXIT_INPUT}, ensure_ascii=False))
+            sys.exit(EXIT_INPUT)
+        print(f"error: {msg}", file=sys.stderr)
+        sys.exit(EXIT_INPUT)
+
     pages = tree.getroot().findall("diagram") or [tree.getroot()]
     errors, warns = [], []
+    per_page = []
     for page in pages:
         e, w = check_page(page)
         errors += e
         warns += w
+        per_page.append({
+            "name": page.get("name", "?"),
+            "errors": len(e),
+            "warnings": len(w),
+        })
+
+    through = sum(1 for w in warns if "routes through" in w)
+    cross = sum(1 for w in warns if " cross" in w)
+    olap = sum(1 for w in warns if " overlap" in w)
+    score_value = 20 * through + 10 * cross + 5 * olap
+
+    failed = bool(errors or (args.strict and warns))
+    payload = {
+        "ok": not failed,
+        "file": args.file,
+        "strict": bool(args.strict),
+        "summary": {
+            "pages": len(pages),
+            "errors": len(errors),
+            "warnings": len(warns),
+        },
+        "per_page": per_page,
+        "errors": errors,
+        "warnings": warns,
+    }
+
+    if args.score:
+        payload["score"] = {
+            "value": score_value,
+            "through_vertex": through,
+            "crossings": cross,
+            "overlaps": olap,
+        }
+
+    if args.format == "json":
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        sys.exit(EXIT_FAILED if failed else EXIT_OK)
+
     for w in warns:
         print(f"warning: {w}")
     for e in errors:
@@ -327,13 +383,10 @@ def main():
     if args.score:
         # Weighted by how badly each defect hurts readability. Comparable only
         # across variants of the SAME graph (same nodes/edges).
-        through = sum(1 for w in warns if "routes through" in w)
-        cross = sum(1 for w in warns if " cross" in w)
-        olap = sum(1 for w in warns if " overlap" in w)
-        print(f"score: {20 * through + 10 * cross + 5 * olap} "
+        print(f"score: {score_value} "
               f"({through} through-vertex, {cross} crossings, {olap} overlaps)")
-    if errors or (args.strict and warns):
-        sys.exit(1)
+    if failed:
+        sys.exit(EXIT_FAILED)
 
 
 if __name__ == "__main__":

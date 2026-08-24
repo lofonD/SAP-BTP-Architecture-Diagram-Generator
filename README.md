@@ -169,6 +169,7 @@ L0: BTP Platform   (blue border #0070F2, blue fill #EBF8FF)
 | `aiicons.py` | Look up draw.io image styles for AI/LLM brand logos |
 | `relabel.py` | Extract labels → translate → reapply (multilingual diagrams) |
 | `edgeports.py` | Inspect or fix connector exit/entry port assignments |
+| `healthcheck.py` | One-command dependency and core-script smoke test |
 
 ---
 
@@ -198,6 +199,43 @@ python scripts/sap_shapesearch.py --list-categories
 
 ```bash
 python scripts/validate.py my-diagram.drawio --strict --score
+```
+
+### One-command health check
+
+```bash
+py -3 skills/drawio-skill-sap/scripts/healthcheck.py
+```
+
+Use `--json` for CI or machine-readable checks:
+
+```bash
+py -3 skills/drawio-skill-sap/scripts/healthcheck.py --json
+```
+
+### Golden quality regression checks
+
+Baseline expected lint scores/warnings from bundled references:
+
+```bash
+# Recompute baseline (maintainers only)
+py -3 skills/drawio-skill-sap/tests/run_golden_validation.py --update
+
+# Check current results against baseline
+py -3 skills/drawio-skill-sap/tests/run_golden_validation.py
+```
+
+### PR diff report with quality summary
+
+Generate before/head/diff images and include validate score/error/warning summaries:
+
+```bash
+py -3 skills/drawio-skill-sap/scripts/prdiff.py \
+  --base origin/main \
+  --head HEAD \
+  --out-dir drawio-pr \
+  --quality \
+  -o drawio-pr/report.md
 ```
 
 ### Export a diagram
