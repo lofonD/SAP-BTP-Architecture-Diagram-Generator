@@ -2,7 +2,7 @@
 
 A GitHub Copilot agent skill that generates production-quality **SAP Business Technology Platform (BTP) solution diagrams** following the official [SAP BTP Solution Diagram Design Guideline](https://github.com/SAP/btp-solution-diagrams/tree/main/guideline/docs/btp_guideline) (Horizon theme).
 
-> **Skill ID:** `drawio-skill-sap` · **Version:** 1.0.1
+> **Skill ID:** `drawio-skill-sap` · **Version:** 1.0.2
 > **Homepage:** [lofonD/SAP-BTP-Architecture-Diagram-Generator](https://github.com/lofonD/SAP-BTP-Architecture-Diagram-Generator)
 
 ---
@@ -27,7 +27,7 @@ Result:
 
 ## Prerequisites
 
-**draw.io desktop app** must be installed and on your PATH:
+**draw.io desktop app** is advised to be installed and on your PATH:
 
 ```bash
 # Windows
@@ -135,41 +135,11 @@ L0: BTP Platform   (blue border #0070F2, blue fill #EBF8FF)
 
 | Script | Purpose |
 |--------|---------|
+| `encode_drawio_url.py` | Generate a diagrams.net browser-fallback URL (when CLI unavailable) |
+| `repair_png.py` | Fix truncated IEND chunks in draw.io PNG exports |
 | `sap_shapesearch.py` | Look up exact `style=` strings for any SAP icon, product logo, container template, or connector from the official shape library |
 | `shapesearch.py` | Search the full draw.io generic shape index |
-| `autolayout.py` | Graph JSON → auto-placed `.drawio` (Graphviz-based) |
 | `validate.py` | Lint a `.drawio` file for style, XML, and guideline errors |
-| `repair_png.py` | Fix truncated IEND chunks in draw.io PNG exports |
-| `encode_drawio_url.py` | Generate a diagrams.net browser-fallback URL (when CLI unavailable) |
-| `explain.py` | Convert a `.drawio` to a Markdown description |
-| `drawio2pptx.py` | Export `.drawio` to a PowerPoint deck |
-| `drawio2mermaid.py` | Convert `.drawio` to Mermaid diagrams-as-code |
-| `restyle.py` | Re-theme a diagram (dark, corporate, colorblind-safe) |
-| `compress.py` | Compress a complex diagram into an exec-summary view |
-| `heatmap.py` | Colour a diagram by a metrics data file |
-| `timelapse.py` | Animate how an architecture evolved over git history |
-| `drawiodiff.py` | Show what changed between two diagram versions |
-| `buildup.py` | Animate a diagram building itself (HTML player / GIF) |
-| `prdiff.py` | Render before/after/diff for `.drawio` files in PRs |
-| `c4.py` | Generate a C4 model with drill-down links |
-| `seqlayout.py` | Generate a UML sequence diagram |
-| `tubemap.py` | Draw a London-Underground-style metro/tube map |
-| `runbook.py` | Convert a decision tree into a click-through HTML runbook |
-| `sqlerd.py` | Generate an ER diagram from a SQL schema |
-| `openapiimports.py` | Generate an API diagram from an OpenAPI spec |
-| `ciimports.py` | Generate a pipeline DAG from CI workflow files |
-| `tfimports.py` / `tfstate.py` | Generate infrastructure diagrams from Terraform |
-| `k8simports.py` | Generate cluster diagrams from Kubernetes manifests |
-| `composeimports.py` | Generate service diagrams from Docker Compose |
-| `pyimports.py` / `jsimports.py` / `goimports.py` / `rustimports.py` | Module import graphs |
-| `pyclasses.py` | Python class-inheritance graph |
-| `raster2drawio.py` | Convert a whiteboard photo or legacy PNG to editable `.drawio` |
-| `svgflow.py` | Animate data flows on a diagram as an SVG |
-| `drawiohtml.py` | Wrap a `.drawio` in an interactive HTML viewer |
-| `aiicons.py` | Look up draw.io image styles for AI/LLM brand logos |
-| `relabel.py` | Extract labels → translate → reapply (multilingual diagrams) |
-| `edgeports.py` | Inspect or fix connector exit/entry port assignments |
-| `healthcheck.py` | One-command dependency and core-script smoke test |
 
 ---
 
@@ -201,29 +171,6 @@ python scripts/sap_shapesearch.py --list-categories
 python scripts/validate.py my-diagram.drawio --strict --score
 ```
 
-### One-command health check
-
-```bash
-py -3 skills/drawio-skill-sap/scripts/healthcheck.py
-```
-
-Use `--json` for CI or machine-readable checks:
-
-```bash
-py -3 skills/drawio-skill-sap/scripts/healthcheck.py --json
-```
-
-### Golden quality regression checks
-
-Baseline expected lint scores/warnings from bundled references:
-
-```bash
-# Recompute baseline (maintainers only)
-py -3 skills/drawio-skill-sap/tests/run_golden_validation.py --update
-
-# Check current results against baseline
-py -3 skills/drawio-skill-sap/tests/run_golden_validation.py
-```
 
 ### PR diff report with quality summary
 
@@ -261,12 +208,7 @@ drawio -x -f png -e -s 2 -o diagram.drawio.png diagram.drawio
 - [SAP BTP Solution Diagrams (official)](https://github.com/SAP/btp-solution-diagrams)
 - [draw.io Skill (base)](https://github.com/Agents365-ai/drawio-skill)
 - [draw.io Desktop Releases](https://github.com/jgraph/drawio-desktop/releases)
-- [`references/xml-authoring.md`](skills/drawio-skill-sap/references/xml-authoring.md) — XML authoring guide
-- [`references/diagram-types.md`](skills/drawio-skill-sap/references/diagram-types.md) — Supported diagram types
-- [`references/shapes.md`](skills/drawio-skill-sap/references/shapes.md) — Shape reference
-- [`references/style-presets.md`](skills/drawio-skill-sap/references/style-presets.md) — Style presets
 - [`references/troubleshooting.md`](skills/drawio-skill-sap/references/troubleshooting.md) — Common issues and fixes
-- [`skills/drawio-skill-sap/references/toolbox.md`](skills/drawio-skill-sap/references/toolbox.md) — Full script reference
 
 ---
 
