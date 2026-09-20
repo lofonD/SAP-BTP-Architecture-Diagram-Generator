@@ -2,32 +2,33 @@
 name: drawio-skill-sap
 description: "Generate SAP BTP solution diagrams as .drawio XML aligned to the SAP BTP Solution Diagram Design Guideline (Horizon theme), including official colors, area nesting, connector semantics, and draw.io CLI export support."
 homepage: https://github.com/lofonD/SAP-BTP-Architecture-Diagram-Generator
-compatibility: Requires draw.io desktop app CLI on PATH (macOS/Linux/Windows). Optional self-check uses a vision-capable model and is skipped if unavailable.
+compatibility: draw.io desktop app CLI is required only for PNG/SVG/PDF export. This skill is still able to generate `.drawio` files without it.
+Requires draw.io desktop app CLI on PATH (macOS/Linux/Windows). Optional self-check uses a vision-capable model and is skipped if unavailable.
 platforms: [macos, linux, windows]
-metadata: {"openclaw":{"requires":{"anyBins":["draw.io","drawio"]},"emoji":"📐","os":["darwin","linux","win32"],"install":[{"id":"brew-drawio","kind":"brew","formula":"drawio","bins":["draw.io"],"label":"Install draw.io via Homebrew","os":["darwin"]}]},"hermes":{"tags":["drawio","diagram","flowchart","architecture","visualization","uml"],"category":"design","requires_tools":["draw.io"],"related_skills":["mermaid","excalidraw","plantuml"]},"author":"Agents365-ai","version":"1.5.3"}
 ---
-
-# Draw.io Diagrams
-
-## Overview
-Generate `.drawio` XML files and export to PNG/SVG/PDF/JPG locally using the native draw.io desktop app CLI.
-
-**Supported formats:** PNG, SVG, PDF, JPG — no browser automation needed.
 
 # SAP BTP Solution Diagrams
 
-Generate SAP Business Technology Platform solution diagrams following the **official SAP BTP Solution Diagram Design Guideline** (Horizon theme, atomic design system).
+Generate SAP Business Technology Platform (BTP) solution diagrams as `.drawio` XML files, following the **official SAP BTP Solution Diagram Design Guideline** (Horizon theme, atomic design system) and export them to PNG/SVG/PDF/JPG with the native draw.io desktop app CLI - no browser automation needed.
 
 Reference: [SAP/btp-solution-diagrams](https://github.com/SAP/btp-solution-diagrams/tree/main/guideline/docs/btp_guideline)
 
 ## Bundled Resources
 
-Official SAP example diagrams are in `references/`. Load them when you need real-world XML patterns:
-
 | File | Use Case |
 |---|---|
 | `references/drawio-sap-config.json` | The **real, official SAP shape library** (SAP Corporate / SAP BTP Graphics), exported from draw.io. Contains every persona/system icon, SAP product logo, reusable container ("Component Group"), and pre-styled connector as compressed shape XML. **Do not hand-write icon styles — always look shapes up here via `scripts/sap_shapesearch.py`.** <Mandatory to load> |
+| `scripts/encode_drawio_url.py` | Browser-fallback preview when the desktop CLI is unavailable. |
+| `scripts/repair_png.py` | After every `-e` PNG export — fixes draw.io's truncated IEND chunk. |
+| `scripts/sap_build.py` | Render a `drawio` diagram from a small JSON layout spec. Resolves every icon or logo style by name (so the entire 4KB base64 icon are never hand-copied). Emits correct parent nesting, applies the Horizon palettes and connector semantics. Reject any connector with more than one bend. |
 | `scripts/sap_shapesearch.py` | Search `drawio-sap-config.json` by keyword and get the exact, ready-to-paste `style=` string (or full mxCell XML) for a real SAP icon, product logo, container template, or connector. **Use this for every persona/system node — never a plain box.** |
+| `scripts/shapesearch.py` | Generic draw.io shape index. Last-resort fallback only after `scripts/sap_shapesearch.py` finds nothing. |
+| `scripts/validate.py` | Deterministic structural linter. run `--strict --score` and require 0/0/0. |
+
+**Official SAP example diagrams** are in `references/`. They provide real-world XML patterns for SAP BTP solution diagrams.
+
+| File | Use Case |
+|---|---|
 | `references/BTP_Reference_Architect_Diagram.drawio` | BTP Overall Reference Diagram Pattern |
 | `references/SAP_Task_Center_L0.drawio` | L0 Task Center L0 pattern |
 | `references/SAP_Task_Center_L1.drawio` | L1 Task Center L1 pattern |
@@ -37,14 +38,12 @@ Official SAP example diagrams are in `references/`. Load them when you need real
 | `references/SAP_Build_Process_Automation_L2.drawio` | SAP Build Process Automation L2 |
 | `references/SAP_Cloud_Identity_Services_Authentication_L2.drawio` | SAP Cloud Identity Services Authentication L2 |
 | `references/SAP_Private_Link_Service_L2.drawio` | SAP Private Link connectivity (L2) |
-| `scripts/repair_png.py` | After every `-e` PNG export — fixes draw.io's truncated IEND chunk (issue #8) |
-| `scripts/encode_drawio_url.py` | The CLI is unavailable and you need a browser-fallback diagrams.net URL |
 
 > Every bundled `references/*.drawio` example uses `shape=image;...;image=data:image/svg+xml,<data>` for its icons — none of them use a `mxgraph.sap.icon` stencil (that stencil does not exist in draw.io). Always match this pattern.
 
 ## Prerequisites
 
-The draw.io desktop app must be installed:
+The draw.io desktop app provides the CLI used for export.
 
 ```bash
 # Windows
