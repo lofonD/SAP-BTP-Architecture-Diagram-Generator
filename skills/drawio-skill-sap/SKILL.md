@@ -3,7 +3,7 @@ name: drawio-skill-sap
 description: "Generate SAP BTP solution diagrams as .drawio XML aligned to the SAP BTP Solution Diagram Design Guideline (Horizon theme), including official colors, area nesting, connector semantics, and draw.io CLI export support."
 homepage: https://github.com/lofonD/SAP-BTP-Architecture-Diagram-Generator
 compatibility: draw.io desktop app CLI is required only for PNG/SVG/PDF export. This skill is still able to generate `.drawio` files without it.
-Requires draw.io desktop app CLI on PATH (macOS/Linux/Windows). Optional self-check uses a vision-capable model and is skipped if unavailable.
+optional: The vision self-check is skipped if there is no vision-capable model available. Optionally integrates with the official `@drawio/mcp` MCP server (see `.vscode/mcp.json`) for browser-based diagram previews and generic (non-SAP) shape lookups.
 platforms: [macos, linux, windows]
 ---
 
@@ -18,6 +18,7 @@ Reference: [SAP/btp-solution-diagrams](https://github.com/SAP/btp-solution-diagr
 | File | Use Case |
 |---|---|
 | `references/drawio-sap-config.json` | The **real, official SAP shape library** (SAP Corporate / SAP BTP Graphics), exported from draw.io. Contains every persona/system icon, SAP product logo, reusable container ("Component Group"), and pre-styled connector as compressed shape XML. **Do not hand-write icon styles — always look shapes up here via `scripts/sap_shapesearch.py`.** <Mandatory to load> |
+| `references/troubleshooting.md` | Row-by-row mistake → fix table for export failures, broken layouts, misrouted edges. |
 | `scripts/encode_drawio_url.py` | Browser-fallback preview when the desktop CLI is unavailable. |
 | `scripts/repair_png.py` | After every `-e` PNG export — fixes draw.io's truncated IEND chunk. |
 | `scripts/sap_build.py` | Render a `drawio` diagram from a small JSON layout spec. Resolves every icon or logo style by name (so the entire 4KB base64 icon are never hand-copied). Emits correct parent nesting, applies the Horizon palettes and connector semantics. Reject any connector with more than one bend. |
@@ -30,13 +31,15 @@ Reference: [SAP/btp-solution-diagrams](https://github.com/SAP/btp-solution-diagr
 | File | Use Case |
 |---|---|
 | `references/BTP_Reference_Architect_Diagram.drawio` | BTP Overall Reference Diagram Pattern |
-| `references/SAP_Task_Center_L0.drawio` | L0 Task Center L0 pattern |
-| `references/SAP_Task_Center_L1.drawio` | L1 Task Center L1 pattern |
-| `references/SAP_Task_Center_L2.drawio` | L2 Task Center L2 pattern |
+| `references/SAP_Task_Center_L0.drawio` | L0 Task Center L0 pattern / L0 executive overview |
+| `references/SAP_Task_Center_L1.drawio` | L1 Task Center L1 pattern / L1 architecture view |
+| `references/SAP_Task_Center_L2.drawio` | L2 Task Center L2 pattern / L2 detailed view |
 | `references/SAP_Start_L2.drawio` | SAP Start L2 pattern |
 | `references/SAP_Build_Work_Zone_L2.drawio` | SAP Build Work Zone L2 pattern |
-| `references/SAP_Build_Process_Automation_L2.drawio` | SAP Build Process Automation L2 |
 | `references/SAP_Cloud_Identity_Services_Authentication_L2.drawio` | SAP Cloud Identity Services Authentication L2 |
+| `references/SAP_Cloud_Identity_Services_Authentication_preset_L2.drawio` | Cloud Identity Services — authentication, preset variant |
+| `references/SAP_Cloud_Identity_Services_Authorization_L1.drawio` | Cloud Identity Services — authorization |
+| `references/SAP_Cloud_Identity_Services_Identity_Lifecycle_L1.drawio` | Cloud Identity Services — identity lifecycle |
 | `references/SAP_Private_Link_Service_L2.drawio` | SAP Private Link connectivity (L2) |
 
 > Every bundled `references/*.drawio` example uses `shape=image;...;image=data:image/svg+xml,<data>` for its icons — none of them use a `mxgraph.sap.icon` stencil (that stencil does not exist in draw.io). Always match this pattern.
@@ -49,16 +52,45 @@ The draw.io desktop app provides the CLI used for export.
 # Windows
 "C:\Program Files\draw.io\draw.io.exe" --version
 
-# macOS
-drawio --version
-
-# Linux
-draw.io --version
+# macOS / Linux
+if command -v draw.io &>/dev/null; then DRAWIO="draw.io"
+elif command -v drawio &>/dev/null; then DRAWIO="drawio"
+elif [ -f "/Applications/draw.io.app/Contents/MacOS/draw.io" ]; then DRAWIO="/Applications/draw.io.app/Contents/MacOS/draw.io"
+else echo "draw.io not found — see Fallback chain"; fi
 ```
 
-Install if missing: download from https://github.com/jgraph/drawio-desktop/releases
+Install if missing: download from https://github.com/jgraph/drawio-desktop/releases **The CLI is only required for Step 7 deliverables** — authoring, validation, and the Step 5 visual check all work without it (see Fallback chain).
 
 **SAP shape libraries:** Download the official draw.io shape libraries from [SAP/btp-solution-diagrams/assets/shape-libraries-and-editable-presets/draw.io](https://github.com/SAP/btp-solution-diagrams/tree/main/assets/shape-libraries-and-editable-presets/draw.io) for service icons with grey background circles.
+
+## Optional: draw.io MCP Server (`@drawio/mcp`)
+
+The [official draw.io MCP tool server](https://www.drawio.com/docs/manual/generate/drawio-mcp-server/) (`@drawio/mcp`, stdio) opens generated XML straight in the draw.io editor and can read/write individual pages of a local `.drawio` file. It is **optional, complementary** to this skill, not a replacement: this skill still owns layout, Horizon colors, and SAP icon lookup. It never replaces `scripts/sap_shapesearch.py` as the source of real SAP icon styles, and it does not replace the desktop CLI for PNG/SVG/PDF file export. Use it for fast, no-install browser previews and generic (non-SAP) shape lookups.
+
+**Setup (this repo):** `.vscode/mcp.json` is already configured:
+
+```json
+{
+  "servers": {
+    "drawio": { "command": "npx", "args": ["-y", "@drawio/mcp"] }
+  }
+}
+```
+
+Start the server from the MCP panel (Start above the `drawio` entry), trust it when prompted, ensure Copilot Chat is in Agent mode, and enable the `drawio` tools under Configure Tools (🔧). No local draw.io desktop install is required for this path (it opens diagrams in the browser); the desktop CLI is still required for `-e`-embedded image exports (Steps 4/7).
+
+**How the tools map onto this skill's workflow:**
+
+| MCP tool | Use in this skill? | Notes |
+|---|---|---|
+| `open_drawio_xml` | **Yes** | Preview when the desktop CLI is missing — pass the generated XML and hand the user the editor URL. Do **not** pass `routing="libavoid"`: it re-routes connectors and breaks the straight-corridor alignment rules in this skill. Note the cost trade-off: this tool takes the **whole XML as an argument**, and SAP icons are ~2–6 KB of base64 each, so a modest diagram is 25 KB+ per call. `encode_drawio_url.py` reads from disk and keeps that payload out of context — prefer it when iterating repeatedly. |
+| `list_pages` / `get_page` / `set_page` | **Conditional** | Only useful on a **multi-page** `.drawio` — a file whose `<mxfile>` holds several `<diagram>` elements (one per editor tab), e.g. a deliverable carrying L0 / L1 / L2 as three tabs. There they let you regenerate one level without round-tripping the others. Every bundled `references/*.drawio` is **single-page**, so on those `get_page` returns the entire file (61–235 KB) and buys you nothing. |
+| `search_shapes` | **No** | Returns AWS/Azure/GCP/Cisco stencils, not SAP Horizon shapes. SAP icons **must** come from `scripts/sap_shapesearch.py` against `references/drawio-sap-config.json`. |
+| `open_drawio_csv` / `open_drawio_mermaid` | **No** | Cannot express areas, nesting, Horizon colors, or connector semantics. |
+
+**Still required after MCP:** the MCP server only opens a URL — it does not export files. PNG/SVG/PDF deliverables (Step 7) still need the desktop CLI. The Step 5 vision self-check does **not** — screenshot the editor page in the browser instead (see Step 4). Self-hosted draw.io: set `DRAWIO_BASE_URL` in the server `env`.
+
+**Self-hosted draw.io:** if your organization runs its own draw.io instance instead of `https://app.diagrams.net/`, set `DRAWIO_BASE_URL` in the server's `env` in `.vscode/mcp.json`.
 
 ## SAP BTP Design Guideline (Horizon Theme)
 
@@ -123,12 +155,23 @@ Areas are the primary structural element in BTP diagrams.
 - Do NOT overuse colors — keep diagrams predominantly blue with grey for non-SAP
 - Use `container=0;` on outer areas (not draw.io container behavior)
 
-**Area Nesting Pattern:**
+**Area Nesting Pattern** — each nested level alternates fill: blue → white → blue → white. A direct child of a blue-filled container MUST have white fill, never blue-on-blue. This applies to every container at the same nesting level.
+
 ```
+Outside all architecture areas: End User -> Application Clients
 L0: BTP Platform (blue border #0070F2, blue fill #EBF8FF)
   L1: Subaccount (grey border #475E75, white fill #ffffff)
     L2: Runtime/Service group (blue border #0070F2, blue fill #EBF8FF)
+  L1: Cloud Identity Services (grey border #475E75, white fill #ffffff)
+Top-level peer outside BTP: SAP Cloud Solutions / SAP On-Premise Solutions
 ```
+
+**Top-level placement rule:**
+- End Users and Application Clients are actors and entry points, not BTP content. Give their icon and label cells `parent="1"` and place them completely outside every architecture container.
+- SAP Cloud Solutions and SAP On-Premise Solutions are external solution areas. Give these areas `parent="1"` and place them beside, never inside, the BTP/Global Account boundary.
+- The BTP container is mandatory whenever a BTP service is shown. Only BTP-owned areas and services may be nested inside it.
+- Before writing edges, assert the intended containment tree. A visually plausible diagram with the wrong parent or geometric containment is invalid.
+
 
 ### Line Styles (Connectors)
 
@@ -176,6 +219,30 @@ There is no `mxgraph.sap.icon` / `SAPIcon=<name>` stencil in draw.io — that st
 5. **NEVER use `shape=mxgraph.general.person`** for business users — it renders incorrectly in SAP diagrams. Always use the extracted person-in-circle SVG from the component group.
 6. **Architecture pattern**: Business Users → Application Clients (mobile/desktop) → the first service explicitly requested by the user. Users do NOT connect directly to a BTP service when an application client is part of the scenario. Never insert SAP Build Work Zone or another intermediary unless the requirements call for it.
 
+**Generic entities (users, clients, solution groups, third-party systems)** — these have **no entry in `drawio-sap-config.json`**, because they are not SAP products. They live as ready-made `shape=image` cells inside `references/SAP_Build_Process_Automation_L2.drawio` and must be lifted from there verbatim — never substituted with a plain box or a generic draw.io stencil.
+
+| Name | Artwork | Reference cell id | Typical use |
+|---|---|---|---|
+| `end-user` | person in a circle | `-Aj5rOMPWS9pz5DeyN8X-33` | End User / Business User persona |
+| `application-clients` | desktop + mobile | `-Aj5rOMPWS9pz5DeyN8X-22` | Application Clients (Mobile / Desktop) |
+| `third-party-idp` | two people | `-Aj5rOMPWS9pz5DeyN8X-37` | 3rd party identity provider / identity management |
+| `key-user` | person + settings | `-Aj5rOMPWS9pz5DeyN8X-72` | Process Expert / Key User persona |
+| `screen` | monitor | `-Aj5rOMPWS9pz5DeyN8X-69` | Generic application / UI |
+| `cloud-solutions` | cloud | `-Aj5rOMPWS9pz5DeyN8X-29` | "SAP Cloud Solutions" box |
+| `third-party-apps` | cloud | `ZNLiSohyDAu_GED2eyi8-9` | "3rd Party APIs & Applications" box |
+| `on-premise-solutions` | building | `-Aj5rOMPWS9pz5DeyN8X-85` | "SAP On-Premise Solutions" box |
+| `cloud-connector` | connector | `ZNLiSohyDAu_GED2eyi8-5` | Cloud Connector |
+
+Resolve them by name with `python3 <this-skill-dir>/scripts/sap_build.py --list-generic`, or use `"generic": "<name>"` on a `box`/`generic` node in a build spec. To extract a style by hand, grep the reference file for `id="<cell id>"` and copy its `style=` attribute unchanged.
+
+**Third-party / non-SAP systems — the box + generic icon + title composition.** The official reference builds every non-SAP or external-solution group the same way (see the `3rd Party APIs & Applications`, `SAP Cloud Solutions`, and `SAP On-Premise Solutions` groups in `SAP_Build_Process_Automation_L2.drawio`):
+
+1. A rounded area (`arcSize=24;absoluteArcSize=1;strokeWidth=1.5;`) in the non-SAP palette — border `#475E75`, fill `#F5F6F7`.
+2. The matching **generic icon** (`third-party-apps`, `cloud-solutions`, `on-premise-solutions`) pinned inside the **top-left** of that box, roughly 28x18.
+3. The group name as **bold 16px `#1D2D3E`** text, left-aligned below the icon.
+
+This is the only sanctioned way to draw a system that has no SAP product logo. Do **not** leave such a box icon-less, and do not reach for `shape=mxgraph.general.*`.
+
 **SAP Cloud Identity Services** — always include in BTP diagrams that involve user authentication:
 1. Search: `sap_shapesearch.py "cloud identity"` for the icon
 2. Place inside a dedicated container within BTP (e.g., "SAP Cloud Identity Services" area with blue border)
@@ -215,7 +282,11 @@ Four hierarchy levels:
 
 ### Legend
 
-**Always include a legend** in each diagram to clarify line style meanings.
+**Always include a legend** to clarify line-style meanings, and place it where it cannot collide with the drawing:
+
+1. Put it in an **empty corner** — bottom-right is usually free, since most flows run left-to-right and top-to-bottom.
+2. Trace every connector route first; the legend must not intersect any of them.
+3. Never place it between a source and target that connectors route through.
 
 ## SAP BTP Component Catalog
 
@@ -273,12 +344,13 @@ Verify draw.io CLI is accessible:
    - L0: Global Account / BTP Platform boundary (blue fill)
    - L1: Subaccounts (no fill / white)
    - L2: Runtime environments, services
-5. **Generate** — write `.drawio` XML using official Horizon colors. **For every persona/system node, look up its real icon/logo with `scripts/sap_shapesearch.py "<name>"` first** — never fall back to a plain rounded rectangle for a named component (only areas/containers use plain rectangles).
+5. **Generate** — write the `.drawio`. **Preferred path: describe the layout as a JSON spec and render it with `python3 <this-skill-dir>/scripts/sap_build.py spec.json -o diagram.drawio`**, which resolves icon/logo styles by name, nests children correctly, and applies the Horizon palettes. Only hand-write XML for trivial diagrams — and then still look up every persona/system icon with `scripts/sap_shapesearch.py "<name>"` first. Never fall back to a plain rounded rectangle for a named component (only areas/containers use plain rectangles, and non-SAP boxes still carry a generic icon).
 
 Load one of the reference examples (e.g., `references/SAP_Task_Center_L2.drawio`) as a pattern when building complex diagrams.
 
 **XML Rules:**
 - `id="0"` and `id="1"` are required root cells — never omit
+- **Nest child cells under their container.** Anything drawn inside an area must be a real child cell: `parent="<area-id>"` with `<mxGeometry>` coordinates **relative to that area's top-left**. Only genuinely top-level elements (title, description, actors, peer areas, legend) use `parent="1"`. Cells that merely overlap a container while sharing `parent="1"` are geometrically ambiguous, and `validate.py` reports every one of them as `vertices 'a' and 'b' overlap` — which fails the 0-warning gate in Step 5.
 - All text uses `html=1` in style
 - Multi-line labels: use `&#xa;` for line breaks in `value` attributes
 - Never use `--` inside XML comments
@@ -296,15 +368,21 @@ Load one of the reference examples (e.g., `references/SAP_Task_Center_L2.drawio`
 
 ### Step 4 — Export Draft PNG
 
-Export preview (without `-e` for clean vision-compatible PNG):
+Export a preview PNG — **without** `-e`, which keeps it clean for vision review (see Export Commands for the full command).
 
-```bash
-# Windows
-"C:\Program Files\draw.io\draw.io.exe" -x -f png -s 2 -o diagram.png diagram.drawio
+**If the CLI is missing, do not skip the visual check — screenshot the browser preview instead:**
 
-# macOS/Linux
-drawio -x -f png -s 2 -o diagram.png diagram.drawio
-```
+1. `python3 <this-skill-dir>/scripts/encode_drawio_url.py diagram.drawio > viewer_url.txt` — this deflate-compresses the XML into a `https://viewer.diagrams.net/#R...` fragment. The fragment is never sent to the server, so nothing is uploaded.
+2. The URL is very long (embedded SVG icons inflate it), so don't pass it through a tool argument. Write a one-line redirect page next to it and open **that**:
+   ```html
+   <!doctype html><meta charset="utf-8"><script>location.replace("<url from viewer_url.txt>");</script>
+   ```
+3. Open `file:///.../preview.html` in the browser tool and take a screenshot. Open a **fresh** page each time — the diagrams.net viewer restores the previous zoom/scroll from storage, so reloading an existing tab gives a cropped capture.
+4. Feed that screenshot into the Step 5 self-check exactly as you would a CLI-exported PNG.
+
+This is a preview only — it produces no deliverable file. Step 7 still needs the desktop CLI.
+
+**MCP alternative:** if the `drawio` MCP server (see [Optional: draw.io MCP Server]) is enabled and the user wants an interactive browser preview instead of a static PNG, call `open_drawio_xml` with the generated XML as `content`. This still requires the same self-check and validation in Step 5 before treating the diagram as approved.
 
 ### Step 5 — Self-Check
 
@@ -318,6 +396,10 @@ Use vision capability to verify the exported PNG:
 | Clipped labels | Text cut off | Increase shape dimensions |
 | Missing connections | Disconnected arrows | Verify source/target ids |
 | Line style consistency | Solid=sync, Dashed=async per legend | Fix dashed attribute |
+| Top-level placement | End User/Application Clients and external solution areas are outside BTP and all nested areas | Move them to `parent="1"` and outside the BTP geometry |
+| Container nesting | Every cell inside an area is a real child (`parent="<area-id>"`, relative geometry) | Re-parent the cell and convert its geometry to parent-relative |
+| Icon-less non-SAP box | A third-party / cloud / on-premise box has no generic icon | Add the matching generic icon top-left (see Icons) |
+| Connector bend budget | Every line has zero bends, or one bend only when alignment is impossible | Align endpoints or use one exact corner waypoint; reject 2+ bends |
 | Spacing | Even spacing around elements | Adjust to ~50px gaps |
 | Unrequested components | Products not present in the allowlist | Remove the component and its edges |
 | Wrong service order | Business edge order differs from the requested sequence | Rebuild adjacent edges in the exact order |
@@ -329,7 +411,7 @@ Before visual review, run `python scripts/validate.py diagram.drawio --strict --
 ### Step 6 — Review Loop
 
 Show image to user. Apply targeted XML edits per feedback. Loop until approved.
-Safety valve: after 5 rounds, suggest opening `.drawio` in draw.io desktop.
+Safety valve: after 5 rounds, suggest opening `.drawio` in draw.io desktop (or, if the MCP server is enabled, re-issue `open_drawio_xml` so the user can edit directly in the browser).
 
 ### Step 7 — Final Export
 
@@ -348,6 +430,8 @@ Report file paths. Offer to open: `start diagram.drawio` (Windows).
 ## Draw.io XML Structure
 
 ### File Skeleton (SAP BTP)
+
+Note the `parent` attributes: the subaccount is a child of the BTP area, the service group a child of the subaccount, and the icon a child of the service group — each with coordinates relative to its parent. Only the BTP area, the title, and the external system are top-level (`parent="1"`).
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -481,7 +565,7 @@ To prevent crossing:
 
 ### Straight & Uniform Lines (Minimize 90° Bends)
 
-**Lines should be straight and uniform. Zero bends is preferred; one 90-degree bend is the normal maximum.** Two or more bends are allowed only when a documented obstacle makes them unavoidable.
+**Lines must be straight and uniform. Use zero bends whenever the endpoints can be aligned; one 90-degree bend is the absolute maximum. Never emit a connector with two or more bends.** If a route would need two bends, reposition the nodes or containers before generating XML.
 
 To achieve straight lines:
 
@@ -494,12 +578,14 @@ To achieve straight lines:
 
 3. **Enforce a bend budget before generating XML:**
    - 0 bends: source and target share X center (vertical) or Y center (horizontal)
-   - 1 bend: source and target are offset; pin one explicit `mxPoint` at the intended corner
-   - 2+ bends: reject and reposition elements unless an obstacle makes the extra bends unavoidable
+   - 1 bend: source and target are offset; pin exactly one explicit `mxPoint` that shares the source X and target Y, or the source Y and target X
+   - 2+ bends: reject the layout and reposition elements; there is no exception
 
 4. **Position the User icon** to vertically align with its direct downstream target (typically Application Clients). The User should NOT be offset horizontally from App Clients.
 
 5. **Do not trust automatic orthogonal routing for offset elements.** Auto-routing commonly creates two doglegs. When one bend is intended, add exactly one waypoint and verify the resulting vertical and horizontal segments.
+
+6. **Validate every connector geometrically.** Count direction changes across source port, waypoints, and target port. Reject the file if any connector exceeds one direction change.
 
 ### Connector Label Clearance & Arrow Placement
 
@@ -520,8 +606,8 @@ Rules:
 
 Placement rules:
 1. Position CIS group **below the Subaccount** (e.g., Subaccount bottom=300, CIS top=350) but within the BTP boundary
-2. Place CIS to the **LEFT** side of BTP so that vertical connectors from Integration Suite (typically on the right) do not pass through it
-3. Verify: CIS right edge < IS center X, so IS vertical lines never cross CIS
+2. Align CIS directly below the BTP service it authenticates whenever that produces a straight vertical authentication line. Otherwise place it in a clear lower corridor that still keeps every connector within the one-bend budget.
+3. Verify that CIS does not block the horizontal business-flow centerline or any external-system connector.
 4. **CIS container fill color**: Use **white fill** (`fillColor=#ffffff`) with **grey border** (`strokeColor=#475E75`) — CIS is a direct child of BTP (blue fill), so it follows the alternating fill pattern: blue (BTP) -> white (CIS/Subaccount) -> blue (Services inside Subaccount) -> white (next level)
 5. **CIS -> Subaccount connection**: Add an **OIDC** trust connection (green dashed, bidirectional) from CIS to the Subaccount. This represents the authentication trust configuration (IAS acts as IdP via OpenID Connect). For identity provisioning flows, use a separate **SCIM 2.0** connector (IPS replicates users/groups). **SAML 2.0 is NOT used** for modern multi-environment BTP Subaccount trust — SAML only applies to upstream corporate IdP federation (e.g., Active Directory → IAS) or legacy Neo environments.
 6. **Do NOT** use a box container around the CIS icon if CIS is the only service in the group — the group container with title is sufficient.
@@ -536,42 +622,7 @@ Rules:
 3. Connect horizontal data flows from the icon's side (`exitY=0.5`), not through its text label
 4. If an authentication flow must leave downward, start it from the bottom of the separate label cell
 5. Do NOT add a separate container/area shape around it — the icon and label are the element
-
-### Outlook + Document AI Pattern (Exact-Sequence L2 Baseline)
-
-Use this baseline when the request specifies:
-`Business User -> Microsoft Outlook -> SAP Document AI -> SAP Integration Suite -> SAP S/4HANA Cloud`.
-
-1. **User/App lane (left):**
-   - Reserve a title band inside the Third-Party Application area before placing the Business User icon.
-   - Keep `Business User` icon centered above `Application Clients` icon.
-   - Use a separate `Business User` label cell and route the vertical connector from `user-label` bottom (`exitX=0.5;exitY=1`) to `app-clients-icon` top (`entryX=0.5;entryY=0`).
-   - For Outlook scenarios, set Application Clients label to `Application Clients&#xa;Microsoft Outlook (Desktop)` (or mobile equivalent).
-
-2. **Service lane (inside Subaccount):**
-   - Keep the complete business-flow row on one horizontal centerline:
-     `Application Clients` -> `SAP Document AI` -> `SAP Integration Suite` -> `SAP S/4HANA Cloud`.
-   - Use horizontal connectors only (`exitY=0.5`, `entryY=0.5`) between adjacent services.
-   - Do not insert SAP Build Work Zone. Outlook submits the document to Document AI first; Document AI sends extracted/enriched data to Integration Suite.
-
-3. **Posting lane (right):**
-   - Place `SAP S/4HANA Cloud` in a right-side `SAP Cloud Solutions` area aligned with the service row.
-   - Connect `SAP Integration Suite -> SAP S/4HANA Cloud` horizontally.
-   - Post only to the target named by the user. Do not add SuccessFactors or fan out to unrelated systems.
-
-4. **CIS authentication lane (below Subaccount):**
-   - Keep `SAP Cloud Identity Services` below Subaccount, left side of BTP.
-   - `Application Clients -> CIS`: green dashed, label `OIDC authentication`.
-   - `CIS <-> Subaccount`: green dashed, **bidirectional**, label `OIDC trust`.
-   - Route these auth connectors in a lower corridor so they do not cross service/data connectors.
-   - This depicts IAS-based OpenID Connect authentication/trust. Show SCIM 2.0 separately only when identity provisioning is requested.
-
-5. **No-overlap hard checks:**
-   - No component rectangle may intersect another component rectangle.
-   - No child icon/label may enter its container's title band.
-   - No connector may intersect `Business User` / `Application Clients` text cells or cross another connector.
-   - Give every checked connector explicit ports and at least one waypoint so `validate.py --strict --score` can inspect its route.
-   - If overlap appears, reposition nodes first, then pin ports, then add at most one routing bend.
+6. Keep both Application Clients and End User outside the BTP boundary and outside every other architecture container. Their cells must be top-level children of the graph root.
 
 ### Diagram Title Placement
 
@@ -596,67 +647,19 @@ Routing order for grouped destinations:
 2. Second choice: one shared trunk with a single split point in empty space
 3. Last choice: separate connectors, using distinct ports and non-overlapping corridors
 
-### Area Nesting Fill Pattern (Alternating Colors)
-
-**Always alternate between blue fill and white fill when nesting areas:**
-
-```
-L0: BTP Platform (blue border #0070F2, blue fill #EBF8FF)
-  L1: Subaccount (grey border #475E75, white fill #ffffff)
-    L2: Services group (blue border #0070F2, blue fill #EBF8FF)
-  L1: Cloud Identity Services (grey border #475E75, white fill #ffffff)
-```
-
-**The rule**: Each nested level alternates: blue -> white -> blue -> white. A direct child of a blue-filled container MUST have white fill (not blue-on-blue). This applies to ALL containers at the same nesting level.
-
-### Legend Placement
-
-**The legend MUST NOT overlap with any connector line or element.** Follow these rules:
-
-1. **Place the legend in an empty corner** — typically bottom-right or bottom-left, whichever has no connectors passing through it.
-2. **Check for connector paths** — before placing the legend, trace all connector routes. The legend must not intersect any of them.
-3. **Safe positions:**
-   - Bottom-right corner (recommended): usually free since most flows go left-to-right and top-to-bottom
-   - Below the main diagram area entirely
-   - Inside a blank region with no crossing lines
-4. **Never place the legend** between source and target elements where connectors route through.
-
-
-### Browser fallback (no CLI needed)
-
-When the draw.io desktop CLI is unavailable, generate a client-side viewer URL:
-
-```bash
-python3 <this-skill-dir>/scripts/encode_drawio_url.py input.drawio
-```
-
-Prints a `https://viewer.diagrams.net/...` URL with the diagram XML deflate-compressed and base64-encoded into the URL fragment. The fragment (after `#`) is never sent to the server, so nothing is uploaded — the diagram opens client-side for viewing and editing. Useful when the user cannot install the desktop app.
-
 ### Fallback chain
 
 When tools are unavailable, degrade gracefully:
 
 | Scenario | Behavior |
 |----------|----------|
-| draw.io CLI missing, Python available | Use browser fallback (diagrams.net URL) |
+| draw.io CLI missing, `drawio` MCP server available | Call `open_drawio_xml` with the generated XML (omit `routing`); give the user the returned editor URL. For the vision self-check, screenshot the editor page in the browser (Step 4) |
+| draw.io CLI missing, Python available | Use browser fallback (diagrams.net URL) **and still run the vision self-check** by opening the URL through a local redirect page and screenshotting it (Step 4) |
 | draw.io CLI missing, Python missing | Generate `.drawio` XML only; instruct user to open in draw.io desktop or diagrams.net manually |
 | draw.io CLI crashes / no output in macOS sandbox isolation | Treat CLI as unavailable in-sandbox; use browser fallback / XML-only; ask user to run CLI exports in a non-sandboxed host environment |
-| Vision unavailable for self-check | Skip self-check (step 5); proceed directly to showing user the exported PNG |
+| Vision unavailable for self-check | Skip step 5's visual pass, but `validate.py --strict --score` is still mandatory; then show the user the preview |
 | Export fails (Chromium/display issues) | On Linux, retry with `xvfb-run -a`; if still failing, deliver `.drawio` XML and suggest manual export |
 | Export fails on Linux server (headless) | Try in order: (1) `xvfb-run -a`, (2) append `--no-sandbox` at the very end if root, (3) add `--disable-gpu`, (4) `export HOME=/tmp`, (5) install apt deps (`libgtk-3-0 libnotify4 libnss3 libgbm1 libasound2t64` etc.), (6) fall back to [tomkludy/drawio-renderer](https://hub.docker.com/r/tomkludy/drawio-renderer) Docker (REST API for headless export) |
-
-### Checking if draw.io is in PATH
-
-```bash
-# Try short command first
-if command -v draw.io &>/dev/null; then
-  DRAWIO="draw.io"
-elif [ -f "/Applications/draw.io.app/Contents/MacOS/draw.io" ]; then
-  DRAWIO="/Applications/draw.io.app/Contents/MacOS/draw.io"
-else
-  echo "draw.io not found — install from https://github.com/jgraph/drawio-desktop/releases"
-fi
-```
 
 ## Common Mistakes
 

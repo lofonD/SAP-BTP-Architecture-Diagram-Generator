@@ -2,215 +2,207 @@
 
 A GitHub Copilot agent skill that generates production-quality **SAP Business Technology Platform (BTP) solution diagrams** following the official [SAP BTP Solution Diagram Design Guideline](https://github.com/SAP/btp-solution-diagrams/tree/main/guideline/docs/btp_guideline) (Horizon theme).
 
-> **Skill ID:** `drawio-skill-sap` · **Version:** 1.0.2
+> **Skill ID:** `drawio-skill-sap` · **Version:** 1.0.3
 > **Homepage:** [lofonD/SAP-BTP-Architecture-Diagram-Generator](https://github.com/lofonD/SAP-BTP-Architecture-Diagram-Generator)
 
----
+## What You Get
 
-## What It Does
+- Editable, uncompressed `.drawio` files
+- Official SAP service icons and product logos from the bundled shape library
+- L0, L1, or L2 diagrams for different audiences
+- Structural validation for IDs, nesting, geometry, and connector routing
+- Optional PNG, SVG, PDF, or JPG exports through the draw.io desktop CLI
+- Optional browser previews through the official [`@drawio/mcp`](https://www.drawio.com/doc/faq/drawio-mcp.html) server
 
-Describe your SAP architecture in plain language and the agent generates:
+The skill can create and validate `.drawio` files without draw.io desktop. The desktop app is required only for image or PDF export.
 
-- A `.drawio` file with the correct SAP Horizon colors, nested areas, official SAP icon/logo shapes, and semantically-colored connectors
-- A rendered PNG, SVG, or PDF export via the draw.io desktop CLI
+## Quick Start
 
-The skill enforces the SAP atomic design system — no plain boxes for named services, no hand-written icon styles, no off-palette colors.
+### 1. Install the skill
 
-Prompt: 
-```bash
-/drawio-skill-sap BTP diagram for workzone, integration suite, S/4HANA public cloud and Successfactors
-```
-Result:
-<img width="1175" height="591" alt="image" src="https://github.com/user-attachments/assets/29f0d68f-69ea-4c55-aad0-bdfb73626fcd" />
+<details>
+<summary><strong>Clone</strong></summary>
 
----
-
-## Prerequisites
-
-**draw.io desktop app** is advised to be installed and on your PATH:
+Clone this repository and place `skills/drawio-skill-sap` in an Agent Skills location recognized by your Copilot environment, such as `.github/skills/drawio-skill-sap` in the repository where you want to use it.
 
 ```bash
-# Windows
-"C:\Program Files\draw.io\draw.io.exe" --version
+git clone https://github.com/lofonD/SAP-BTP-Architecture-Diagram-Generator.git
+```
+</details>
 
-# macOS
-drawio --version
+<details>
+<summary><strong>Skills CLI</strong></summary>
 
-# Linux
-draw.io --version
+Install via Skills CLI
+
+```bash
+npx skills add lofonD/SAP-BTP-Architecture-Diagram-Generator --skill drawio-skill-sap
+```
+</details>
+
+### 2. Start using the skill
+
+Open Chat in Agent mode and ask for a diagram:
+
+```text
+/drawio-skill-sap Create an L1 BTP diagram for SAP Build Work Zone,
+Integration Suite, SAP S/4HANA Cloud, and SAP SuccessFactors.
 ```
 
-Download from [jgraph/drawio-desktop/releases](https://github.com/jgraph/drawio-desktop/releases) if missing.
+You can also use a natural-language request:
 
-**Optional:** Download the official SAP shape libraries from [SAP/btp-solution-diagrams](https://github.com/SAP/btp-solution-diagrams/tree/main/assets/shape-libraries-and-editable-presets/draw.io) to use service icons with grey background circles in the draw.io desktop app.
+```text
+Create an L2 SAP BTP architecture diagram showing Integration Suite
+connecting to SAP S/4HANA Cloud through Cloud Connector, with SAP Cloud
+Identity Services handling authentication.
+```
 
----
+If no level is specified, the skill asks once and defaults to L1.
 
-## Supported Platforms
+**Diagram generated:**
 
-| Platform | CLI binary |
-|----------|-----------|
-| Windows  | `draw.io.exe` |
-| macOS    | `draw.io` / `drawio` |
-| Linux    | `draw.io` / `drawio` |
+![Example SAP BTP architecture diagram](https://github.com/user-attachments/assets/29f0d68f-69ea-4c55-aad0-bdfb73626fcd)
 
----
+### 3. Validate the result
 
-## Supported Output Formats
+Python 3 is required for the bundled scripts; they use only the standard library.
 
-| Format | Flag | Notes |
-|--------|------|-------|
-| PNG    | `-f png` | Default; `-s 2` recommended for high-DPI |
-| SVG    | `-f svg` | Vector; scales without loss |
-| PDF    | `-f pdf` | Print-ready |
-| JPG    | `-f jpg` | Lossy; use when file size matters |
+```bash
+python skills/drawio-skill-sap/scripts/validate.py diagram.drawio --strict --score
+```
 
-Add `-e` to the final export to embed the diagram XML inside the PNG/SVG/PDF so the file stays editable in draw.io.
+Strict validation returns a nonzero exit code for errors or warnings, making it suitable for CI.
 
----
+### 4. Export the diagram (optional)
 
-## Diagram Levels of Detail
+Install [draw.io desktop](https://github.com/jgraph/drawio-desktop/releases), then export with its CLI:
 
-| Level | Description | Typical use |
-|-------|-------------|-------------|
-| **L0** | High-level context (platform boundaries only) | Executive overview |
-| **L1** | Subaccount topology | Architecture review |
-| **L2** | Full detail — runtimes, services, connectors, auth flows | Implementation spec |
+```powershell
+# Windows: high-DPI PNG with editable diagram XML embedded
+& "C:\Program Files\draw.io\draw.io.exe" -x -f png -e -s 2 -o diagram.png diagram.drawio
+```
 
----
+```bash
+# macOS / Linux
+drawio -x -f png -e -s 2 -o diagram.png diagram.drawio
+```
 
-## SAP Horizon Design System
+Use `-f svg`, `-f pdf`, or `-f jpg` for another output format. The `-e` flag embeds the source diagram in supported exports so it can be reopened in draw.io.
 
-### Color Palette
+## Diagram Levels
 
-| Purpose | Border | Fill |
-|---------|--------|------|
-| SAP/BTP areas | `#0070F2` | `#EBF8FF` |
-| Non-SAP / external areas | `#475E75` | `#F5F6F7` |
-| Authentication flow | `#188918` | `#F5FAE5` |
-| Authorization flow | `#5D36FF` | `#F1ECFF` |
-| Trust flow | `#CB00DC` | `#FFF0FA` |
+| Level | Audience | Typical content |
+|---|---|---|
+| **L0** | Business stakeholders | Platform boundaries, core systems, and simple flows |
+| **L1** | Architects and solution owners | Subaccounts, major services, integrations, and selected semantic flows |
+| **L2** | Implementation teams | Runtimes, services, trust and authentication paths, protocols, and a full legend |
+
+## Design Rules
+
+The skill applies SAP's atomic design approach rather than treating the diagram as a collection of generic boxes:
+
+- Named SAP services use official SAP icons or product logos.
+- BTP, subaccount, runtime, and external-system boundaries use nested Horizon areas.
+- Grey is the default connector color; semantic colors are reserved for specific flow meanings.
+- Solid, dashed, and dotted lines distinguish direct, indirect, and optional flows.
+- Structural validation catches broken references, invalid nesting, overlaps, and explicit routing defects.
+
+### Horizon palette
+
+| Purpose | Border / line | Fill |
+|---|---|---|
+| SAP/BTP area | `#0070F2` | `#EBF8FF` |
+| Non-SAP or external area | `#475E75` | `#F5F6F7` |
+| Authentication | `#188918` | `#F5FAE5` |
+| Authorization | `#5D36FF` | `#F1ECFF` |
+| Trust | `#CB00DC` | `#FFF0FA` |
 | Warning | `#C35500` | `#FFF8D6` |
 | Error | `#D20A0A` | `#FFEAF4` |
-| Accent (teal) | `#07838F` | `#DAFDF5` |
+| Highlight | `#07838F` | `#DAFDF5` |
 
-### Area Nesting Pattern
+### Connector semantics
 
-```
-L0: BTP Platform   (blue border #0070F2, blue fill #EBF8FF)
-  L1: Subaccount   (grey border #475E75, white fill #ffffff)
-    L2: Service group (blue border #0070F2, blue fill #EBF8FF)
-```
+| Style | Meaning |
+|---|---|
+| Solid | Direct or synchronous flow |
+| Dashed | Indirect or asynchronous flow |
+| Dotted | Optional flow |
+| Thick grey, no arrow | Firewall or network barrier |
 
-### Connector Semantics
+For the complete generation rules, see [`skills/drawio-skill-sap/SKILL.md`](skills/drawio-skill-sap/SKILL.md).
 
-| Line style | Meaning |
-|------------|---------|
-| Solid      | Direct / synchronous |
-| Dashed     | Indirect / asynchronous |
-| Dotted     | Optional flow |
-| Thick grey | Firewall / network barrier |
+## Included Tools
 
----
+Run these commands from the repository root.
 
-## Bundled Reference Diagrams
-
-| File | Pattern |
-|------|---------|
-| `references/SAP_Task_Center_L0.drawio` | Task Center — context level |
-| `references/SAP_Task_Center_L1.drawio` | Task Center — subaccount level |
-| `references/SAP_Task_Center_L2.drawio` | Task Center — full detail |
-| `references/SAP_Start_L2.drawio` | SAP Start |
-| `references/SAP_Build_Work_Zone_L2.drawio` | SAP Build Work Zone |
-| `references/SAP_Build_Process_Automation_L2.drawio` | SAP Build Process Automation |
-| `references/SAP_Cloud_Identity_Services_Authentication_L2.drawio` | Cloud Identity — authentication |
-| `references/SAP_Cloud_Identity_Services_Authorization_L1.drawio` | Cloud Identity — authorization |
-| `references/SAP_Cloud_Identity_Services_Identity_Lifecycle_L1.drawio` | Cloud Identity — identity lifecycle |
-| `references/SAP_Private_Link_Service_L2.drawio` | SAP Private Link connectivity |
-| `references/BTP_Reference_Architect_Diagram.drawio` | BTP overall reference pattern |
-
----
-
-## Bundled Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `encode_drawio_url.py` | Generate a diagrams.net browser-fallback URL (when CLI unavailable) |
-| `repair_png.py` | Fix truncated IEND chunks in draw.io PNG exports |
-| `sap_shapesearch.py` | Look up exact `style=` strings for any SAP icon, product logo, container template, or connector from the official shape library |
-| `shapesearch.py` | Search the full draw.io generic shape index |
-| `validate.py` | Lint a `.drawio` file for style, XML, and guideline errors |
-
----
-
-## Usage Examples
-
-### Basic BTP diagram
-
-> "Generate an L2 SAP BTP architecture diagram showing Integration Suite connecting to S/4HANA Cloud via the Cloud Connector, with Cloud Identity Services for authentication."
-
-The agent will:
-1. Clarify any missing details (services, detail level, on-premise systems)
-2. Look up every service icon with `sap_shapesearch.py`
-3. Write the `.drawio` XML following the Horizon design system
-4. Export a preview PNG and show it for review
-5. Apply feedback edits until approved
-6. Produce the final PNG/SVG with embedded diagram XML
-
-### Search for a shape style
+### Find an SAP shape
 
 ```bash
-python scripts/sap_shapesearch.py "integration suite"
-python scripts/sap_shapesearch.py "cloud identity"
-python scripts/sap_shapesearch.py --list-categories
+python skills/drawio-skill-sap/scripts/sap_shapesearch.py "integration suite"
+python skills/drawio-skill-sap/scripts/sap_shapesearch.py "cloud identity" --format json
+python skills/drawio-skill-sap/scripts/sap_shapesearch.py --list-categories
 ```
+
+The search returns exact styles from the bundled SAP shape library. `shapesearch.py` provides a generic draw.io fallback when no SAP shape matches.
+
+### Build from a JSON layout spec
+
+`sap_build.py` turns a compact JSON specification into uncompressed `.drawio` XML and resolves SAP icons by name:
+
+```bash
+python skills/drawio-skill-sap/scripts/sap_build.py spec.json -o diagram.drawio
+python skills/drawio-skill-sap/scripts/sap_build.py --find "cloud integration"
+```
+
+See the script's module documentation for the supported node types, edge kinds, and specification format.
 
 ### Validate a diagram
 
 ```bash
-python scripts/validate.py my-diagram.drawio --strict --score
+python skills/drawio-skill-sap/scripts/validate.py diagram.drawio --strict --score
+python skills/drawio-skill-sap/scripts/validate.py diagram.drawio --format json
 ```
 
+### Preview without draw.io desktop
 
-### PR diff report with quality summary
-
-Generate before/head/diff images and include validate score/error/warning summaries:
+Generate a diagrams.net URL from a local file:
 
 ```bash
-py -3 skills/drawio-skill-sap/scripts/prdiff.py \
-  --base origin/main \
-  --head HEAD \
-  --out-dir drawio-pr \
-  --quality \
-  -o drawio-pr/report.md
+python skills/drawio-skill-sap/scripts/encode_drawio_url.py diagram.drawio
 ```
 
-### Export a diagram
+The optional `.vscode/mcp.json` configuration starts the official draw.io MCP server with `npx -y @drawio/mcp`. It can open XML in the browser, but SAP shape lookup still belongs to `sap_shapesearch.py`, and file export still requires draw.io desktop.
 
-```bash
-# Windows — PNG preview
-"C:\Program Files\draw.io\draw.io.exe" -x -f png -s 2 -o diagram.png diagram.drawio
+## Repository Contents
 
-# Windows — final PNG with embedded XML
-"C:\Program Files\draw.io\draw.io.exe" -x -f png -e -s 2 -o diagram.drawio.png diagram.drawio
-
-# SVG
-"C:\Program Files\draw.io\draw.io.exe" -x -f svg -e -o diagram.drawio.svg diagram.drawio
-
-# macOS/Linux
-drawio -x -f png -e -s 2 -o diagram.drawio.png diagram.drawio
+```text
+skills/drawio-skill-sap/
+|-- SKILL.md                       # Agent instructions and design rules
+|-- references/
+|   |-- drawio-sap-config.json     # Bundled SAP shape library
+|   |-- *.drawio                   # Official reference patterns
+|   `-- troubleshooting.md
+`-- scripts/
+    |-- sap_build.py               # JSON spec to .drawio builder
+    |-- sap_shapesearch.py         # SAP shape lookup
+    |-- shapesearch.py             # Generic draw.io shape lookup
+    |-- validate.py                # Structural linter
+    |-- encode_drawio_url.py       # Browser-preview URL generator
+    `-- repair_png.py              # Repair truncated PNG IEND chunks
 ```
 
----
+Bundled examples cover SAP Task Center at L0/L1/L2, SAP Start, SAP Build Work Zone, SAP Cloud Identity Services, SAP Private Link Service, and a broader BTP reference architecture.
+
+## Troubleshooting
+
+For common XML, icon, layout, routing, and export issues, see [`skills/drawio-skill-sap/references/troubleshooting.md`](skills/drawio-skill-sap/references/troubleshooting.md).
 
 ## References
 
-- [SAP BTP Solution Diagrams (official)](https://github.com/SAP/btp-solution-diagrams)
-- [draw.io Skill (base)](https://github.com/Agents365-ai/drawio-skill)
-- [draw.io Desktop Releases](https://github.com/jgraph/drawio-desktop/releases)
-- [`references/troubleshooting.md`](skills/drawio-skill-sap/references/troubleshooting.md) — Common issues and fixes
-
----
+- [SAP BTP Solution Diagrams](https://github.com/SAP/btp-solution-diagrams)
+- [SAP BTP Solution Diagram Design Guideline](https://github.com/SAP/btp-solution-diagrams/tree/main/guideline/docs/btp_guideline)
+- [draw.io desktop releases](https://github.com/jgraph/drawio-desktop/releases)
+- [draw.io Agent Skill base project](https://github.com/Agents365-ai/drawio-skill)
 
 ## License
 
