@@ -2,7 +2,7 @@
 
 A GitHub Copilot agent skill that generates production-quality **SAP Business Technology Platform (BTP) solution diagrams** following the official [SAP BTP Solution Diagram Design Guideline](https://github.com/SAP/btp-solution-diagrams/tree/main/guideline/docs/btp_guideline) (Horizon theme).
 
-> **Skill ID:** `drawio-skill-sap` · **Version:** 1.0.2
+> **Skill ID:** `drawio-skill-sap` · **Version:** 1.0.3
 > **Homepage:** [lofonD/SAP-BTP-Architecture-Diagram-Generator](https://github.com/lofonD/SAP-BTP-Architecture-Diagram-Generator)
 
 ---
@@ -122,7 +122,6 @@ L0: BTP Platform   (blue border #0070F2, blue fill #EBF8FF)
 | `references/SAP_Task_Center_L2.drawio` | Task Center — full detail |
 | `references/SAP_Start_L2.drawio` | SAP Start |
 | `references/SAP_Build_Work_Zone_L2.drawio` | SAP Build Work Zone |
-| `references/SAP_Build_Process_Automation_L2.drawio` | SAP Build Process Automation |
 | `references/SAP_Cloud_Identity_Services_Authentication_L2.drawio` | Cloud Identity — authentication |
 | `references/SAP_Cloud_Identity_Services_Authorization_L1.drawio` | Cloud Identity — authorization |
 | `references/SAP_Cloud_Identity_Services_Identity_Lifecycle_L1.drawio` | Cloud Identity — identity lifecycle |

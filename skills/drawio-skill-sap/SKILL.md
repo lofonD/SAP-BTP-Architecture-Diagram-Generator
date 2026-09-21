@@ -35,7 +35,6 @@ Reference: [SAP/btp-solution-diagrams](https://github.com/SAP/btp-solution-diagr
 | `references/SAP_Task_Center_L2.drawio` | L2 Task Center L2 pattern / L2 detailed view |
 | `references/SAP_Start_L2.drawio` | SAP Start L2 pattern |
 | `references/SAP_Build_Work_Zone_L2.drawio` | SAP Build Work Zone L2 pattern |
-| `references/SAP_Build_Process_Automation_L2.drawio` | SAP Build Process Automation L2 |
 | `references/SAP_Cloud_Identity_Services_Authentication_L2.drawio` | SAP Cloud Identity Services Authentication L2 |
 | `references/SAP_Cloud_Identity_Services_Authentication_preset_L2.drawio` | Cloud Identity Services — authentication, preset variant |
 | `references/SAP_Cloud_Identity_Services_Authorization_L1.drawio` | Cloud Identity Services — authorization |
