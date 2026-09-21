@@ -3,7 +3,7 @@ name: drawio-skill-sap
 description: "Generate SAP BTP solution diagrams as .drawio XML aligned to the SAP BTP Solution Diagram Design Guideline (Horizon theme), including official colors, area nesting, connector semantics, and draw.io CLI export support."
 homepage: https://github.com/lofonD/SAP-BTP-Architecture-Diagram-Generator
 compatibility: draw.io desktop app CLI is required only for PNG/SVG/PDF export. This skill is still able to generate `.drawio` files without it.
-Requires draw.io desktop app CLI on PATH (macOS/Linux/Windows). Optional self-check uses a vision-capable model and is skipped if unavailable.
+optional: self-check uses a vision-capable model and is skipped if unavailable. Optionally integrates with the official `@drawio/mcp` MCP server (see `.vscode/mcp.json`) for browser-based diagram previews and generic (non-SAP) shape lookups.
 platforms: [macos, linux, windows]
 ---
 
@@ -59,6 +59,33 @@ draw.io --version
 Install if missing: download from https://github.com/jgraph/drawio-desktop/releases
 
 **SAP shape libraries:** Download the official draw.io shape libraries from [SAP/btp-solution-diagrams/assets/shape-libraries-and-editable-presets/draw.io](https://github.com/SAP/btp-solution-diagrams/tree/main/assets/shape-libraries-and-editable-presets/draw.io) for service icons with grey background circles.
+
+## Optional: draw.io MCP Server (`@drawio/mcp`)
+
+The official draw.io MCP tool server (from [jgraph/drawio-mcp](https://github.com/jgraph/drawio-mcp)) is an **optional, complementary** integration — it never replaces `scripts/sap_shapesearch.py` as the source of real SAP icon styles, and it does not replace the desktop CLI for PNG/SVG/PDF file export. Use it for fast, no-install browser previews and generic (non-SAP) shape lookups.
+
+**Setup (this repo):** `.vscode/mcp.json` is already configured:
+
+```json
+{
+  "servers": {
+    "drawio": { "command": "npx", "args": ["-y", "@drawio/mcp"] }
+  }
+}
+```
+
+Start the server from the MCP panel (Start above the `drawio` entry), trust it when prompted, ensure Copilot Chat is in Agent mode, and enable the `drawio` tools under Configure Tools (🔧). No local draw.io desktop install is required for this path (it opens diagrams in the browser); the desktop CLI is still required for `-e`-embedded image exports (Steps 4/7).
+
+**How the tools map onto this skill's workflow:**
+
+| MCP tool | Use in this skill |
+|---|---|
+| `open_drawio_xml` | Fast browser preview of the generated `.drawio` XML during Steps 4/6 (in addition to, or instead of, the CLI PNG export) when the user just wants to view/edit interactively rather than get an image file. Pass `routing="libavoid"` to auto-fix connector/obstacle overlaps on a layout you already positioned. Avoid `postLayout="elk"` on final SAP diagrams — it will not preserve the Horizon area-nesting/alternating-fill layout rules in this file. |
+| `search_shapes` | Last-resort fallback for **non-SAP, generic** shapes (e.g. AWS/Azure icons, network/BPMN symbols) — only after both `scripts/sap_shapesearch.py` and `scripts/shapesearch.py` find nothing. **Never** use it in place of `sap_shapesearch.py` for SAP personas/products/services — the real SAP icon/logo styles only exist in `references/drawio-sap-config.json`. |
+| `open_drawio_mermaid` / `open_drawio_csv` | Not used for SAP BTP diagrams (out of scope for the Horizon guideline) — SAP diagrams are always authored as `.drawio` XML per this skill's rules. |
+| `list_pages` / `get_page` / `set_page` | Optional for inspecting or patching a single page of a large multi-page `.drawio` file without loading/rewriting the whole document. |
+
+**Self-hosted draw.io:** if your organization runs its own draw.io instance instead of `https://app.diagrams.net/`, set `DRAWIO_BASE_URL` in the server's `env` in `.vscode/mcp.json`.
 
 ## SAP BTP Design Guideline (Horizon Theme)
 
@@ -306,6 +333,8 @@ Export preview (without `-e` for clean vision-compatible PNG):
 drawio -x -f png -s 2 -o diagram.png diagram.drawio
 ```
 
+**MCP alternative:** if the `drawio` MCP server (see [Optional: draw.io MCP Server](#optional-drawio-mcp-server-drawiomcp)) is enabled and the user wants an interactive browser preview instead of a static PNG, call `open_drawio_xml` with the generated XML as `content`. This still requires the same self-check and validation in Step 5 before treating the diagram as approved.
+
 ### Step 5 — Self-Check
 
 Use vision capability to verify the exported PNG:
@@ -329,7 +358,7 @@ Before visual review, run `python scripts/validate.py diagram.drawio --strict --
 ### Step 6 — Review Loop
 
 Show image to user. Apply targeted XML edits per feedback. Loop until approved.
-Safety valve: after 5 rounds, suggest opening `.drawio` in draw.io desktop.
+Safety valve: after 5 rounds, suggest opening `.drawio` in draw.io desktop (or, if the MCP server is enabled, re-issue `open_drawio_xml` so the user can edit directly in the browser).
 
 ### Step 7 — Final Export
 
