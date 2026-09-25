@@ -30,6 +30,7 @@ Reference: [SAP/btp-solution-diagrams](https://github.com/SAP/btp-solution-diagr
 
 | File | Use Case |
 |---|---|
+| `references/SAP_Build_Process_Automation_L2.drawio` | SAP Build Process Automation L2 — also the source of the **generic icons** (see Icons) |
 | `references/BTP_Reference_Architect_Diagram.drawio` | BTP Overall Reference Diagram Pattern |
 | `references/SAP_Task_Center_L0.drawio` | L0 Task Center L0 pattern / L0 executive overview |
 | `references/SAP_Task_Center_L1.drawio` | L1 Task Center L1 pattern / L1 architecture view |
@@ -310,7 +311,7 @@ Areas/containers use plain Horizon-styled rectangles (`strokeWidth=1.5` on all).
 | S/4HANA (on-prem or public/private cloud), SuccessFactors, Fieldglass, Ariba, etc. | real product logo (`sap_shapesearch.py "s/4hana"`, `"successfactors"`, ... — use `(Default)` variant) | — | — |
 | Cloud Connector | real icon (`sap_shapesearch.py "cloud connector"`) | — | — |
 | On-Premise SAP System box / Third-Party box | `rounded=1;` (area/container) | `#475E75` | `#F5F6F7` |
-| End Users / Business Users | real icon — extract the **person-in-circle** style from the `"Application and User"` component group (`sap_shapesearch.py "Application and User" --full`, then take the second `shape=image` style). **Do NOT use `shape=mxgraph.general.person`** — it does not render as a proper SAP icon. | — | — |
+| End Users / Business Users | real icon — the `end-user` generic icon (`sap_build.py --list-generic`, cell `-Aj5rOMPWS9pz5DeyN8X-33` in `references/SAP_Build_Process_Automation_L2.drawio`), or the second `shape=image` style in the `"Application and User"` component group. **Do NOT use `shape=mxgraph.general.person`** — it does not render as a proper SAP icon. | — | — |
 | Application Clients (Mobile/Desktop) | real icon — extract the **mobile/desktop devices** style from the `"Application and User"` component group (first `shape=image` style). Place between Business Users and BTP services as a required intermediary layer. | — | — |
 | SAP Cloud Identity Services | real icon (`sap_shapesearch.py "cloud identity"`) — include as a standard component inside BTP for authentication flows. | — | — |
 | Semantic badge (e.g. OIDC) | `rounded=1;arcSize=16;absoluteArcSize=1;` | `#188918` | `#F5FAE5` |
